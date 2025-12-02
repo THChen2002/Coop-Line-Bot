@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}待辦事項表單{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/todo_list.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card">
+    <h1>📝 待辦事項</h1>
+    <p class="subtitle" id="formSubtitle">新增待辦事項</p>
+
+    <form id="todoForm">
+      <div class="form-group">
+        <label for="title">標題 *</label>
+        <input type="text" id="title" placeholder="請輸入待辦事項標題" required>
+      </div>
+
+      <div class="form-group">
+        <label for="description">描述</label>
+        <textarea id="description" rows="3" placeholder="詳細說明（選填）"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label for="category">類別</label>
+        <select id="category">
+          <option value="一般">一般</option>
+          <option value="工作">工作</option>
+          <option value="學習">學習</option>
+          <option value="生活">生活</option>
+          <option value="購物">購物</option>
+          <option value="其他">其他</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>優先度</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" id="priority-low" name="priority" value="low">
+            <label for="priority-low">低</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" id="priority-medium" name="priority" value="medium" checked>
+            <label for="priority-medium">中</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" id="priority-high" name="priority" value="high">
+            <label for="priority-high">高</label>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="assignee">負責人</label>
+        <select id="assignee">
+          <option value="">未分配</option>
+          {% for member in members %}
+          <option value="{{ member.id }}">{{ member.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="dueDate">到期日</label>
+        <input type="date" id="dueDate">
+      </div>
+
+      <div class="form-group">
+        <label>狀態</label>
+        <div class="radio-group">
+          <div class="radio-btn">
+            <input type="radio" id="status-pending" name="status" value="pending" checked>
+            <label for="status-pending">待處理</label>
+          </div>
+          <div class="radio-btn">
+            <input type="radio" id="status-in-progress" name="status" value="in_progress">
+            <label for="status-in-progress">進行中</label>
+          </div>
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block" id="submitBtn">確認送出</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/todo_form.js') }}"></script>
+<script>
+  window.GROUP_ID = '{{ group_id }}';
+  window.onload = function () {
+    initTodoForm('{{ liff_id }}');
+  };
+</script>
+{% endblock %}

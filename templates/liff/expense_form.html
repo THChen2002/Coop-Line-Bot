@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block title %}記帳表單{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/expense_form.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card">
+    <h1>💰 記帳表單</h1>
+    <p class="subtitle">輕鬆記錄每一筆支出</p>
+
+    <form id="expenseForm">
+      <div class="form-group">
+        <label for="description">項目名稱 *</label>
+        <input type="text" id="description" placeholder="例如：午餐、計程車" required>
+      </div>
+
+      <div class="form-group">
+        <label for="amount">總金額 *</label>
+        <input type="number" id="amount" placeholder="0" min="1" step="1" required>
+      </div>
+
+      <div class="form-group">
+        <label for="payer">付款人 *</label>
+        <select id="payer" required>
+          <option value="">請選擇付款人</option>
+          {% for member in members %}
+          <option value="{{ member.id }}">{{ member.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>分帳方式</label>
+        <div class="split-type-buttons">
+          <button type="button" class="split-type-btn active" data-type="equal">平均分帳</button>
+          <button type="button" class="split-type-btn" data-type="custom">自訂金額</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>分帳成員</label>
+        <div id="membersList">
+          {% for member in members %}
+          <div class="member-item">
+            <input type="checkbox" id="member_{{ member.id }}" value="{{ member.id }}" data-name="{{ member.name }}"
+              checked>
+            <img src="{{ member.picture_url }}" alt="{{ member.name }}" class="member-avatar">
+            <span class="member-name">{{ member.name }}</span>
+            <input type="number" class="member-amount" id="amount_{{ member.id }}" placeholder="0" min="0" step="1"
+              disabled>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="total-amount" id="totalCheck" style="display: none;">
+        <div class="label">已分配金額</div>
+        <div class="value" id="allocatedAmount">NT$ 0</div>
+      </div>
+
+      <button type="submit" class="btn btn-primary btn-block">確認送出</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/expense_form.js') }}"></script>
+<script>
+  window.GROUP_ID = '{{ group_id }}';
+  window.onload = function () {
+    initExpenseForm('{{ liff_id }}');
+  };
+</script>
+{% endblock %}

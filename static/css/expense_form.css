@@ -1,0 +1,151 @@
+/* 記帳表單專屬樣式 */
+
+.member-item {
+    display: flex;
+    align-items: center;
+    padding: 12px 15px;
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    margin-bottom: 10px;
+    transition: background 0.3s;
+}
+
+.member-item:hover {
+    background: #eef2f7;
+}
+
+/* Checkbox 樣式優化 */
+.member-item input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    margin-right: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+/* 成員頭貼 */
+.member-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 10px;
+    flex-shrink: 0;
+    border: 1px solid #e0e0e0;
+    background-color: #fff;
+}
+
+/* 成員名稱優化 - 支援長名字 */
+.member-name {
+    flex: 1;
+    font-weight: 500;
+    color: var(--text-primary);
+    margin-right: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-width: 0; /* 允許 flex item 縮小到小於內容寬度 */
+}
+
+/* 金額輸入框優化 */
+/* 使用更高權重的選擇器來覆蓋 base.css 中的 input[type="number"] { width: 100% } */
+.member-item input.member-amount {
+    width: 100px;
+    padding: 8px 10px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-sm);
+    font-size: 14px;
+    text-align: right;
+    flex-shrink: 0; /* 防止輸入框被壓縮 */
+}
+
+.member-amount:disabled {
+    background: #e9ecef;
+    color: var(--text-light);
+    border-color: transparent;
+}
+
+.member-amount:focus {
+    border-color: var(--primary-color);
+    outline: none;
+}
+
+/* 分帳方式按鈕 */
+.split-type-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: var(--spacing-md);
+}
+
+.split-type-btn {
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    background: white;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.2s;
+    font-family: inherit;
+    color: var(--text-secondary);
+}
+
+.split-type-btn:hover {
+    background-color: #f8f9fa;
+}
+
+.split-type-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 4px rgba(52, 152, 219, 0.2);
+}
+
+/* 總金額顯示區域 */
+.total-amount {
+    background: #f0f7ff;
+    padding: 15px;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    text-align: center;
+    border: 1px solid #d0e3ff;
+}
+
+.total-amount .label {
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: 5px;
+}
+
+.total-amount .value {
+    color: var(--primary-color);
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.total-amount .value.over-budget {
+    color: var(--danger-color);
+}
+
+/* 手機版適配優化 */
+@media (max-width: 480px) {
+    .member-item {
+        padding: 10px;
+    }
+    
+    /* 同樣需要增加權重 */
+    .member-item input.member-amount {
+        width: 85px;
+        padding: 6px 8px;
+    }
+    
+    .member-item input[type="checkbox"] {
+        margin-right: 10px;
+    }
+    
+    .member-avatar {
+        width: 28px;
+        height: 28px;
+        margin-right: 8px;
+    }
+}

@@ -1,0 +1,340 @@
+/* 待辦清單專屬樣式 */
+
+/* 表單選擇器樣式優化 */
+.radio-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.radio-btn {
+    flex: 1;
+    position: relative; /* 為了讓 input 和 label 正確定位 */
+}
+
+.radio-btn input[type="radio"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.radio-btn label {
+    display: block;
+    width: 100%;
+    height: 100%;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    background: white;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.3s;
+    font-weight: 500;
+    margin: 0; /* 修正 label margin */
+    color: var(--text-primary);
+}
+
+.radio-btn input[type="radio"]:checked + label {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* 優先度按鈕專屬配色 */
+.radio-btn input#priority-low:checked + label {
+    background: var(--success-color);
+    border-color: var(--success-color);
+}
+
+.radio-btn input#priority-medium:checked + label {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+.radio-btn input#priority-high:checked + label {
+    background: var(--danger-color);
+    border-color: var(--danger-color);
+}
+
+/* 到期日樣式修正 */
+input[type="date"] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 16px;
+    font-family: inherit;
+    background-color: white; /* 確保背景色 */
+    -webkit-appearance: none; /* 移除 iOS 預設樣式 */
+    appearance: none;
+}
+
+input[type="date"]:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* 以下為原本的 todo_list.css 內容 */
+
+.todo-filters {
+    display: flex;
+    gap: 10px;
+    margin-bottom: var(--spacing-md);
+    flex-wrap: wrap;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    border: 2px solid var(--border-color);
+    background: white;
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+.filter-btn.active {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+.todo-item {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    transition: all 0.3s;
+    cursor: pointer;
+}
+
+.todo-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.todo-item.completed {
+    opacity: 0.6;
+}
+
+.todo-item.completed .todo-title {
+    text-decoration: line-through;
+    color: var(--text-light);
+}
+
+.todo-header {
+    display: flex;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xs);
+}
+
+.todo-status-icon {
+    font-size: 20px;
+    margin-right: var(--spacing-xs);
+    flex-shrink: 0;
+}
+
+.todo-title {
+    flex: 1;
+    font-weight: 600;
+    font-size: 16px;
+    color: var(--text-primary);
+    word-break: break-word;
+}
+
+.todo-priority {
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+    margin-left: var(--spacing-xs);
+}
+
+.todo-priority.high {
+    background: #fee;
+    color: var(--danger-color);
+}
+
+.todo-priority.medium {
+    background: #fff4e5;
+    color: var(--warning-color);
+}
+
+.todo-priority.low {
+    background: #e8f5e9; /* 改為淺綠色背景 */
+    color: var(--success-color); /* 改為綠色文字 */
+}
+
+.todo-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-top: var(--spacing-xs);
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.todo-meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.todo-description {
+    margin-top: var(--spacing-xs);
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.todo-actions {
+    display: flex;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+}
+
+.todo-action-btn {
+    padding: 6px 12px;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    font-family: inherit;
+}
+
+.todo-action-btn.edit {
+    background: var(--primary-color);
+    color: white;
+}
+
+.todo-action-btn.complete {
+    background: var(--success-color);
+    color: white;
+}
+
+.todo-action-btn.delete {
+    background: var(--danger-color);
+    color: white;
+}
+
+.todo-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--text-light);
+}
+
+.empty-state-icon {
+    font-size: 48px;
+    margin-bottom: var(--spacing-sm);
+}
+
+.fab {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    border: none;
+    font-size: 28px;
+    cursor: pointer;
+    box-shadow: var(--shadow-lg);
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.fab:hover {
+    transform: scale(1.1);
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3);
+}
+
+.fab:active {
+    transform: scale(1.05);
+}
+
+.category-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    background: var(--bg-light);
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.status-badge {
+    display: inline-block;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.pending {
+    background: #f5f5f5;
+    color: #999;
+}
+
+.status-badge.in_progress {
+    background: #e3f2fd;
+    color: #667eea;
+}
+
+.status-badge.completed {
+    background: #e8f5e9;
+    color: #06c755;
+}
+
+.due-date {
+    color: var(--warning-color);
+}
+
+.due-date.overdue {
+    color: var(--danger-color);
+    font-weight: 600;
+}
+
+/* 統計卡片 */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-lg);
+}
+
+.stat-card {
+    background: white;
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    text-align: center;
+    box-shadow: var(--shadow-sm);
+}
+
+.stat-value {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-color);
+    margin-bottom: 4px;
+}
+
+.stat-label {
+    font-size: 14px;
+    color: var(--text-secondary);
+}

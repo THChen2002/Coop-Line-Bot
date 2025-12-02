@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}LINE 分帳系統{% endblock %}</title>
+
+  <!-- Base CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
+
+  <!-- Page specific CSS -->
+  {% block styles %}{% endblock %}
+</head>
+
+<body>
+  <!-- Loading Container (hidden by default) -->
+  <div id="loadingContainer" class="loading-container hidden">
+    <div class="spinner"></div>
+    <p class="loading-text">載入中...</p>
+  </div>
+
+  <!-- Main Content -->
+  <div id="mainContent">
+    {% block content %}{% endblock %}
+  </div>
+
+  <!-- jQuery -->
+  <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+  <!-- LIFF SDK -->
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+
+  <!-- Base JavaScript -->
+  <script src="{{ url_for('static', filename='js/base.js') }}"></script>
+
+  <!-- Page specific JavaScript -->
+  {% block scripts %}{% endblock %}
+</body>
+
+</html>

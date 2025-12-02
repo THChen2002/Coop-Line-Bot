@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}載入中...{% endblock %}
+
+{% block content %}
+<div class="loading">
+  <div class="spinner"></div>
+  <p>載入中...</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  window.onload = async function () {
+    const liffId = '{{ liff_id }}';
+    const initialized = await initializeLIFF(liffId);
+
+    if (initialized) {
+      console.log('LIFF initialized');
+      // 可在這裡做跳轉或其他操作
+    }
+  };
+</script>
+{% endblock %}
