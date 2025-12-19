@@ -1,0 +1,91 @@
+/* 群組表單頁面樣式 */
+
+.form-actions {
+    margin-top: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.group-code-display {
+    text-align: center;
+    padding: var(--spacing-md);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    margin: var(--spacing-md) 0;
+}
+
+.group-code-large {
+    font-size: 32px;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+    color: var(--primary-color);
+    letter-spacing: 4px;
+    margin: var(--spacing-sm) 0;
+}
+
+.group-info-box {
+    background: var(--bg-light);
+    border-left: 4px solid var(--primary-color);
+    padding: var(--spacing-md);
+    border-radius: var(--radius-sm);
+    margin: var(--spacing-md) 0;
+}
+
+.group-info-box p {
+    margin: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.group-info-box strong {
+    color: var(--text-primary);
+}
+
+/* 邀請連結區塊 */
+.invite-link-section {
+    margin: var(--spacing-md) 0;
+}
+
+.link-container {
+    display: flex;
+    gap: var(--spacing-xs);
+    align-items: center;
+}
+
+.invite-link-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-size: 13px;
+    background: var(--bg-light);
+    color: var(--text-primary);
+    font-family: 'Courier New', monospace;
+}
+
+.btn-copy {
+    padding: 10px 16px;
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    border-radius: var(--radius-md);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    white-space: nowrap;
+}
+
+.btn-copy:hover {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+}
+
+.btn-copy:active {
+    transform: translateY(0);
+}
+
+.btn-copy.copied {
+    background: var(--success-color);
+}

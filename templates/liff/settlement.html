@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+
+{% block title %}結算資訊{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settlement.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- 結算摘要卡片 -->
+  <div class="card summary-card">
+    <div class="card-header" style="margin-bottom: var(--spacing-md);">
+      <button onclick="history.back()" class="btn-icon-back" style="color: white; margin-left: -8px;">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h2 style="color: white; margin-bottom: 0;"><i class="fas fa-file-invoice-dollar"></i> 結算摘要</h2>
+    </div>
+    
+    <div class="summary-stats">
+      <div class="stat-item">
+        <span class="stat-label">未結算帳目</span>
+        <span id="expenseCount" class="stat-value">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 收支平衡卡片 -->
+  <div class="card">
+    <h3><i class="fas fa-balance-scale text-primary"></i> 收支平衡</h3>
+    <div id="balancesList"></div>
+    <div id="emptyBalanceState" class="empty-state hidden">
+      <p>目前沒有未結算的帳目</p>
+    </div>
+  </div>
+
+  <!-- 還款計畫卡片 -->
+  <div id="paymentSection" class="card hidden">
+    <h3><i class="fas fa-hand-holding-usd text-primary"></i> 還款計畫</h3>
+    <p class="text-secondary">最優化還款方案（最少轉帳次數）</p>
+    <div id="paymentPlansList"></div>
+  </div>
+
+  <!-- 操作按鈕 -->
+  <div id="actionSection" class="action-section hidden">
+    <button id="clearBtn" class="btn btn-danger btn-block">
+      <i class="fas fa-check-circle"></i> 確認清帳
+    </button>
+  </div>
+
+  <!-- 無帳目時的操作按鈕 -->
+  <div id="emptyActionSection" class="action-section hidden">
+    <!-- 已無按鈕需求，保留結構以防未來擴充 -->
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/settlement.js') }}?v=20251204"></script>
+<script>
+  window.GROUP_ID = '{{ group_id }}';
+  window.onload = function () {
+    initSettlementPage('{{ liff_id }}');
+  };
+</script>
+{% endblock %}

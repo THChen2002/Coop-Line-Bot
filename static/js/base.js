@@ -15,6 +15,17 @@ async function initializeLIFF(liffId, showLoader = true) {
   try {
     await liff.init({ liffId: liffId });
     console.log('LIFF initialized successfully');
+
+    // 檢查登入狀態（外部瀏覽器需要登入）
+    if (!liff.isLoggedIn()) {
+      console.log('User not logged in, redirecting to login...');
+      if (showLoader) {
+        showLoading('正在導向登入...');
+      }
+      liff.login({ redirectUri: window.location.href });
+      return false;  // 登入後會重新導向回來
+    }
+
     if (showLoader) {
       hideLoading();
     }
@@ -75,16 +86,16 @@ function showAlert(message, type = 'info', duration = 3000) {
   if (!$('#alertAnimationStyle').length) {
     $('<style id="alertAnimationStyle">')
       .text(`
-                @keyframes slideDown {
-                    from {
-                        opacity: 0;
-                        transform: translateX(-50%) translateY(-20px);
-                    }
-                    to {
-                        opacity: 1;
-                        transform: translateX(-50%) translateY(0);
-                    }
+              @keyframes slideDown {
+                from {
+                  opacity: 0;
+                  transform: translateX(-50%) translateY(-20px);
                 }
+                to {
+                  opacity: 1;
+                  transform: translateX(-50%) translateY(0);
+                }
+              }
             `)
       .appendTo('head');
   }
@@ -100,6 +111,130 @@ function showAlert(message, type = 'info', duration = 3000) {
   }
 
   return $alert;
+}
+
+/**
+ * 顯示確認對話框
+ * @param {string} message - 訊息內容
+ * @param {Object} options - 選項
+ * @param {string} options.confirmText - 確認按鈕文字
+ * @param {string} options.cancelText - 取消按鈕文字
+ * @param {string} options.type - 對話框類型 (warning, danger, info)
+ * @returns {Promise<boolean>} 使用者是否確認
+ */
+function showConfirm(message, options = {}) {
+  const {
+    confirmText = '確認',
+    cancelText = '取消',
+    type = 'warning'
+  } = options;
+
+  return new Promise((resolve) => {
+    // 移除舊的確認對話框（如果存在）
+    $('.modal.confirm-dialog').remove();
+
+    // 創建 modal 容器（使用統一的 modal 類別）
+    const $overlay = $('<div>')
+      .addClass('modal confirm-dialog')
+      .css({
+        animation: 'fadeIn 0.2s ease'
+      });
+
+    // 創建對話框內容（使用統一的 modal-content 類別）
+    const $dialog = $('<div>')
+      .addClass('modal-content')
+      .css({
+        animation: 'scaleIn 0.2s ease'
+      });
+
+    // 訊息文字
+    const $message = $('<p>')
+      .text(message)
+      .css({
+        margin: '0',
+        fontSize: '16px',
+        lineHeight: '1.5',
+        color: 'var(--text-primary)',
+        whiteSpace: 'pre-line',
+        textAlign: 'center'
+      });
+
+    // 按鈕容器（使用統一的 modal-actions 類別）
+    const $buttons = $('<div>')
+      .addClass('modal-actions')
+      .css({
+        flexDirection: 'row',
+        gap: 'var(--spacing-sm)'
+      });
+
+    // 取消按鈕
+    const $cancelBtn = $('<button>')
+      .text(cancelText)
+      .addClass('btn btn-secondary')
+      .css({
+        flex: '1'
+      })
+      .on('click', () => {
+        closeDialog(false);
+      });
+
+    // 確認按鈕
+    const $confirmBtn = $('<button>')
+      .text(confirmText)
+      .addClass(type === 'danger' ? 'btn btn-danger' : 'btn btn-primary')
+      .css({
+        flex: '1'
+      })
+      .on('click', () => {
+        closeDialog(true);
+      });
+
+    // 關閉對話框
+    function closeDialog(result) {
+      $overlay.css('animation', 'fadeIn 0.2s ease reverse');
+      $dialog.css('animation', 'scaleIn 0.2s ease reverse');
+      setTimeout(() => {
+        $overlay.remove();
+        resolve(result);
+      }, 200);
+    }
+
+    // 組合元素
+    $buttons.append($cancelBtn, $confirmBtn);
+    $dialog.append($message, $buttons);
+    $overlay.append($dialog);
+
+    // 添加動畫樣式
+    if (!$('#confirmAnimationStyle').length) {
+      $('<style id="confirmAnimationStyle">')
+        .text(`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes scaleIn {
+            from {
+              opacity: 0;
+              transform: scale(0.9);
+            }
+            to {
+              opacity: 1;
+              transform: scale(1);
+            }
+          }
+        `)
+        .appendTo('head');
+    }
+
+    $('body').append($overlay);
+
+    // 點擊遮罩關閉
+    $overlay.on('click', (e) => {
+      if (e.target === $overlay[0]) {
+        closeDialog(false);
+      }
+    });
+  });
 }
 
 /**
@@ -266,6 +401,15 @@ function throttle(func, limit = 300) {
       setTimeout(() => inThrottle = false, limit);
     }
   };
+}
+
+/**
+ * 跳脫 HTML 特殊字元（防止 XSS 攻擊）
+ * @param {string} text - 要跳脫的文字
+ * @returns {string} 跳脫後的文字
+ */
+function escapeHtml(text) {
+  return $('<div>').text(text).html();
 }
 
 // 錯誤處理樣式

@@ -19,8 +19,79 @@ class FlexMessageHelper:
     COLOR_BG_LIGHT = "#f8f9fa"   # 淺灰背景
 
     @staticmethod
-    def create_expense_success(expense: Dict, splits: List[Dict]) -> FlexMessage:
-        """建立記帳成功的 Flex Message"""
+    def _format_date(created_at, default='剛剛'):
+        """格式化日期為 YYYY-MM-DD 格式
+        
+        支援多種日期格式：
+        - datetime 物件（有 strftime 方法）
+        - Firestore Timestamp 字典（有 seconds 鍵）
+        - RFC 2822 字串格式（如 'Mon, 22 Dec 2025 03:52:24 GMT'）
+        - ISO 格式字串
+        """
+        if not created_at:
+            return default
+        
+        from datetime import datetime
+        from email.utils import parsedate_to_datetime
+        
+        # 如果是 datetime 物件
+        if hasattr(created_at, 'strftime'):
+            return created_at.strftime('%Y-%m-%d')
+        
+        # 如果是 Firestore Timestamp 字典
+        if isinstance(created_at, dict) and 'seconds' in created_at:
+            return datetime.fromtimestamp(created_at['seconds']).strftime('%Y-%m-%d')
+        
+        # 如果是字串
+        if isinstance(created_at, str):
+            try:
+                # 嘗試解析 RFC 2822 格式（如 'Mon, 22 Dec 2025 03:52:24 GMT'）
+                dt = parsedate_to_datetime(created_at)
+                return dt.strftime('%Y-%m-%d')
+            except (ValueError, TypeError):
+                try:
+                    # 嘗試解析 ISO 格式
+                    dt = datetime.fromisoformat(created_at.replace('Z', '+00:00'))
+                    return dt.strftime('%Y-%m-%d')
+                except (ValueError, TypeError):
+                    # 如果都解析失敗，返回預設值
+                    return default
+        
+        return default
+
+    @staticmethod
+    def _create_row(label: str, value: str) -> Dict:
+        """建立詳細資訊的一行"""
+        return {
+            "type": "box",
+            "layout": "baseline",
+            "contents": [
+                {
+                    "type": "text",
+                    "text": label,
+                    "color": FlexMessageHelper.COLOR_TEXT_SUB,
+                    "size": "sm",
+                    "flex": 1
+                },
+                {
+                    "type": "text",
+                    "text": str(value),
+                    "wrap": True,
+                    "color": FlexMessageHelper.COLOR_TEXT_MAIN,
+                    "size": "sm",
+                    "flex": 3
+                }
+            ],
+            "margin": "md"
+        }
+
+    @staticmethod
+    def create_expense_success(expense: Dict, splits: List[Dict], is_edit: bool = False) -> Dict:
+        """建立記帳成功／更新成功的 Flex Message bubble
+
+        回傳純 bubble 字典，前端需自行包裝成 {type: 'flex', altText: '...', contents: bubble}
+        後端若要使用 FlexMessage，需自行用 FlexMessage(contents=FlexContainer.from_dict(bubble))
+        """
         split_type_names = {
             'equal': '平均分帳',
             'selected': '指定成員',
@@ -53,6 +124,13 @@ class FlexMessageHelper:
                 "margin": "sm"
             })
 
+        # 格式化日期
+        date_str = FlexMessageHelper._format_date(expense.get('created_at'), default='剛剛')
+
+        # 依據模式決定標題與顏色
+        header_title = "帳目已更新" if is_edit else "記帳成功"
+        header_color = FlexMessageHelper.COLOR_WARNING if is_edit else FlexMessageHelper.COLOR_SUCCESS
+
         bubble = {
             "type": "bubble",
             "size": "giga",
@@ -67,11 +145,11 @@ class FlexMessageHelper:
                         "color": "#ffffff",
                         "size": "xxs",
                         "align": "center",
-                        "letterSpacing": "2px"
+                        "lineSpacing": "2px"
                     },
                     {
                         "type": "text",
-                        "text": "記帳成功",
+                        "text": header_title,
                         "weight": "bold",
                         "color": "#ffffff",
                         "size": "lg",
@@ -79,7 +157,7 @@ class FlexMessageHelper:
                         "margin": "sm"
                     }
                 ],
-                "backgroundColor": FlexMessageHelper.COLOR_SUCCESS,
+                "backgroundColor": header_color,
                 "paddingAll": "20px"
             },
             "body": {
@@ -116,7 +194,7 @@ class FlexMessageHelper:
                             FlexMessageHelper._create_row("項目", expense['description']),
                             FlexMessageHelper._create_row("付款人", expense['payer_name']),
                             FlexMessageHelper._create_row("分帳方式", split_type_names.get(expense['split_type'], '平均分帳')),
-                            FlexMessageHelper._create_row("日期", expense.get('created_at', '').strftime('%Y-%m-%d') if hasattr(expense.get('created_at'), 'strftime') else '剛剛'),
+                            FlexMessageHelper._create_row("日期", date_str),
                         ]
                     },
                     {
@@ -154,17 +232,228 @@ class FlexMessageHelper:
                     }
                 ],
                 "paddingAll": "15px"
+            },
+            "action": {
+                "type": "uri",
+                "label": "action",
+                "uri": f"https://liff.line.me/{LIFF.get_liff_id('FULL')}/expenses/{expense.get('expense_number', 0)}"
             }
         }
 
-        return FlexMessage(
-            alt_text=f"記帳成功：{expense['description']} NT$ {int(expense['amount']):,}",
-            contents=FlexContainer.from_dict(bubble)
-        )
+        return bubble
 
     @staticmethod
-    def create_settlement_result(balance_summary: Dict, payment_plans: List[Dict]) -> FlexMessage:
-        """建立結算結果的 Flex Message"""
+    def create_expense_deleted_message(expense: Dict) -> Dict:
+        """建立帳目刪除的 Flex Message bubble"""
+        
+        # 格式化日期
+        date_str = FlexMessageHelper._format_date(expense.get('created_at'), default='未知日期')
+
+        bubble = {
+            "type": "bubble",
+            "size": "giga",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "RECEIPT",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "xxs",
+                        "align": "center",
+                        "lineSpacing": "2px"
+                    },
+                    {
+                        "type": "text",
+                        "text": "帳目已刪除",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "lg",
+                        "align": "center",
+                        "margin": "sm"
+                    }
+                ],
+                "backgroundColor": FlexMessageHelper.COLOR_DANGER,
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    # 刪除提示
+                    {
+                        "type": "text",
+                        "text": "以下帳目已被移除",
+                        "size": "sm",
+                        "color": FlexMessageHelper.COLOR_TEXT_SUB,
+                        "align": "center",
+                        "margin": "md"
+                    },
+                    {
+                        "type": "separator",
+                        "margin": "xl"
+                    },
+                    # 詳細資訊
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "xl",
+                        "spacing": "md",
+                        "contents": [
+                            FlexMessageHelper._create_row("項目", expense.get('description', '未命名')),
+                            FlexMessageHelper._create_row("金額", f"NT$ {int(expense.get('amount', 0)):,}"),
+                            FlexMessageHelper._create_row("付款人", expense.get('payer_name', '未知')),
+                            FlexMessageHelper._create_row("建立日期", date_str),
+                        ]
+                    }
+                ]
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": f"Expense ID: #{expense.get('expense_number', 0):03d}",
+                        "size": "xxs",
+                        "color": "#bbbbbb",
+                        "align": "center"
+                    }
+                ],
+                "paddingAll": "15px"
+            },
+            "action": {
+                "type": "uri",
+                "label": "action",
+                "uri": f"https://liff.line.me/{LIFF.get_liff_id('FULL')}/groups/{expense.get('group_id', '')}"
+            }
+        }
+
+        return bubble
+
+    @staticmethod
+    def create_todo_action_bubble(todo: Dict, action: str) -> Dict:
+        """建立待辦事項操作的 Flex bubble
+
+        action: 'created' | 'updated' | 'deleted'
+        """
+        action_titles = {
+            'created': '新增待辦',
+            'updated': '待辦已更新',
+            'deleted': '待辦已刪除',
+        }
+        action_colors = {
+            'created': FlexMessageHelper.COLOR_SUCCESS,
+            'updated': FlexMessageHelper.COLOR_WARNING,
+            'deleted': FlexMessageHelper.COLOR_DANGER,
+        }
+
+        priority_names = {
+            'low': '低',
+            'medium': '中',
+            'high': '高',
+        }
+
+        status_names = {
+            'pending': '待處理',
+            'in_progress': '進行中',
+            'completed': '已完成',
+            'cancelled': '已取消',
+        }
+
+        title = todo.get('title', '未命名待辦')
+        assignee_name = todo.get('assignee_name') or '未指派'
+        category = todo.get('category') or '一般'
+        priority = priority_names.get(todo.get('priority', 'medium'), '中')
+        status = status_names.get(todo.get('status', 'pending'), '待處理')
+        due_date = todo.get('due_date') or '未設定'
+
+        header_title = action_titles.get(action, '待辦更新')
+        header_color = action_colors.get(action, FlexMessageHelper.COLOR_PRIMARY)
+
+        bubble = {
+            "type": "bubble",
+            "size": "giga",
+            "header": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "TODO",
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "xxs",
+                        "align": "center",
+                        "lineSpacing": "2px"
+                    },
+                    {
+                        "type": "text",
+                        "text": header_title,
+                        "weight": "bold",
+                        "color": "#ffffff",
+                        "size": "lg",
+                        "align": "center",
+                        "margin": "sm"
+                    }
+                ],
+                "backgroundColor": header_color,
+                "paddingAll": "20px"
+            },
+            "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": title,
+                        "size": "lg",
+                        "weight": "bold",
+                        "color": FlexMessageHelper.COLOR_TEXT_MAIN,
+                        "wrap": True
+                    },
+                    {
+                        "type": "box",
+                        "layout": "vertical",
+                        "margin": "xl",
+                        "spacing": "md",
+                        "contents": [
+                            FlexMessageHelper._create_row("負責人", assignee_name),
+                            FlexMessageHelper._create_row("類別", category),
+                            FlexMessageHelper._create_row("優先度", priority),
+                            FlexMessageHelper._create_row("狀態", status),
+                            FlexMessageHelper._create_row("到期日", due_date),
+                        ]
+                    },
+                ]
+            },
+            "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                    {
+                        "type": "text",
+                        "text": "前往待辦清單",
+                        "size": "xxs",
+                        "color": "#bbbbbb",
+                        "align": "center"
+                    }
+                ],
+                "paddingAll": "12px"
+            },
+            "action": {
+                "type": "uri",
+                "label": "action",
+                "uri": f"https://liff.line.me/{LIFF.get_liff_id('FULL')}/groups/{todo.get('group_id', '')}?feature=todo"
+            }
+        }
+
+        return bubble
+    @staticmethod
+    def create_settlement_bubble(balance_summary: Dict, payment_plans: List[Dict]) -> Dict:
+        """建立結算結果的 Flex Message bubble（供前端或後端重用）"""
         # 分類應收和應付
         creditors = []
         debtors = []
@@ -339,7 +628,7 @@ class FlexMessageHelper:
                         "color": "#ffffff",
                         "size": "xxs",
                         "align": "center",
-                        "letterSpacing": "2px"
+                        "lineSpacing": "2px"
                     },
                     {
                         "type": "text",
@@ -361,696 +650,4 @@ class FlexMessageHelper:
             }
         }
 
-        return FlexMessage(
-            alt_text="結算報告",
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def create_expense_list(expenses: List[Dict]) -> FlexMessage:
-        """建立帳目清單的 Flex Message"""
-        if not expenses:
-            return FlexMessageHelper.create_info_message("無未結帳目", "目前沒有未結算的帳目，太棒了！")
-
-        total_amount = sum(e.get('amount', 0) for e in expenses)
-        
-        # 帳目列表內容
-        expense_rows = []
-        for expense in expenses[:10]:  # 顯示前 10 筆
-            expense_rows.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": expense.get('description', '未命名'),
-                                "size": "sm",
-                                "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                                "weight": "bold",
-                                "maxLines": 1,
-                                "wrap": True
-                            },
-                            {
-                                "type": "text",
-                                "text": f"#{expense.get('expense_number', 0):03d} • {expense.get('payer_name', '未知')}",
-                                "size": "xxs",
-                                "color": FlexMessageHelper.COLOR_TEXT_SUB
-                            }
-                        ],
-                        "flex": 7
-                    },
-                    {
-                        "type": "text",
-                        "text": f"NT$ {int(expense.get('amount', 0)):,}",
-                        "size": "sm",
-                        "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                        "weight": "bold",
-                        "align": "end",
-                        "flex": 3
-                    }
-                ],
-                "paddingAll": "sm",
-                "action": {
-                    "type": "message",
-                    "label": "詳細",
-                    "text": f"查詢帳目 #{expense.get('expense_number')}"
-                }
-            })
-            expense_rows.append({"type": "separator"})
-
-        # 移除最後一個分隔線
-        if expense_rows:
-            expense_rows.pop()
-
-        bubble = {
-            "type": "bubble",
-            "size": "giga",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "EXPENSES",
-                        "weight": "bold",
-                        "color": FlexMessageHelper.COLOR_PRIMARY,
-                        "size": "xxs",
-                        "letterSpacing": "2px"
-                    },
-                    {
-                        "type": "text",
-                        "text": "未結帳目",
-                        "weight": "bold",
-                        "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                        "size": "xl",
-                        "margin": "sm"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"總計 NT$ {int(total_amount):,}",
-                        "size": "md",
-                        "color": FlexMessageHelper.COLOR_DANGER,
-                        "weight": "bold",
-                        "margin": "xs"
-                    }
-                ],
-                "paddingAll": "20px",
-                "paddingBottom": "10px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": expense_rows,
-                        "backgroundColor": FlexMessageHelper.COLOR_BG_LIGHT,
-                        "cornerRadius": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": f"共 {len(expenses)} 筆記錄",
-                        "size": "xs",
-                        "color": "#aaaaaa",
-                        "align": "center",
-                        "margin": "md"
-                    }
-                ],
-                "paddingAll": "20px",
-                "paddingTop": "0px"
-            }
-        }
-
-        return FlexMessage(
-            alt_text="未結帳目清單",
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def create_todo_list(todos: List) -> FlexMessage:
-        """建立待辦清單的 Flex Message"""
-        from models.todo import Todo
-
-        if not todos:
-            return FlexMessageHelper.create_info_message("無待辦事項", "目前沒有待辦事項，放鬆一下吧！")
-
-        # 統計
-        pending_count = 0
-        completed_count = 0
-        
-        todo_rows = []
-        for todo in todos[:10]:
-            if isinstance(todo, Todo):
-                todo_dict = todo.to_dict()
-            else:
-                todo_dict = todo
-            
-            status = todo_dict.get('status', 'pending')
-            is_done = status == 'completed'
-            if is_done:
-                completed_count += 1
-            else:
-                pending_count += 1
-
-            icon = "✅" if is_done else "⬜"
-            if status == 'in_progress':
-                icon = "🔄"
-            
-            title_color = "#aaaaaa" if is_done else FlexMessageHelper.COLOR_TEXT_MAIN
-            decoration = "line-through" if is_done else "none"
-            
-            todo_rows.append({
-                "type": "box",
-                "layout": "horizontal",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": icon,
-                        "flex": 0,
-                        "size": "sm",
-                        "gravity": "center"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": todo_dict.get('title', '未命名'),
-                                "size": "sm",
-                                "color": title_color,
-                                "decoration": decoration,
-                                "weight": "bold" if not is_done else "regular",
-                                "wrap": True
-                            },
-                            {
-                                "type": "text",
-                                "text": f"{todo_dict.get('assignee_name', '未分配')} • {todo_dict.get('category', '一般')}",
-                                "size": "xxs",
-                                "color": "#aaaaaa"
-                            }
-                        ],
-                        "flex": 1,
-                        "margin": "sm"
-                    }
-                ],
-                "margin": "md"
-            })
-
-        bubble = {
-            "type": "bubble",
-            "size": "giga",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "TODO LIST",
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "xxs",
-                        "letterSpacing": "2px"
-                    },
-                    {
-                        "type": "text",
-                        "text": "待辦事項",
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "lg",
-                        "margin": "sm"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "horizontal",
-                        "contents": [
-                            {
-                                "type": "text",
-                                "text": f"待處理: {pending_count}",
-                                "size": "xs",
-                                "color": "#ffffff",
-                                "flex": 0,
-                                "weight": "bold"
-                            },
-                            {
-                                "type": "text",
-                                "text": "|",
-                                "size": "xs",
-                                "color": "#ffffff",
-                                "margin": "sm",
-                                "flex": 0,
-                                "alpha": 0.5
-                            },
-                            {
-                                "type": "text",
-                                "text": f"已完成: {completed_count}",
-                                "size": "xs",
-                                "color": "#ffffff",
-                                "margin": "sm",
-                                "flex": 0,
-                                "alpha": 0.8
-                            }
-                        ],
-                        "margin": "xs"
-                    }
-                ],
-                "backgroundColor": FlexMessageHelper.COLOR_ACCENT,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": todo_rows,
-                "paddingAll": "20px"
-            },
-            "footer": {
-                 "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {
-                            "type": "uri",
-                            "label": "＋ 新增待辦事項",
-                            "uri": f"https://liff.line.me/{LIFF.get_liff_id('TALL')}/todo/form"
-                        },
-                        "style": "primary",
-                        "color": FlexMessageHelper.COLOR_ACCENT,
-                        "height": "sm"
-                    }
-                ],
-                "paddingAll": "20px",
-                "paddingTop": "0px"
-            }
-        }
-
-        return FlexMessage(
-            alt_text="待辦清單",
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def create_simple_message(title: str, message: str, color: str = "#2c3e50") -> FlexMessage:
-        """建立簡單訊息的 Flex Message"""
-        bubble = {
-            "type": "bubble",
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": title,
-                        "weight": "bold",
-                        "color": color,
-                        "size": "md"
-                    },
-                    {
-                        "type": "text",
-                        "text": message,
-                        "wrap": True,
-                        "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                        "size": "sm",
-                        "margin": "md"
-                    }
-                ],
-                "paddingAll": "20px"
-            }
-        }
-        return FlexMessage(
-            alt_text=title,
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def create_success_message(message: str) -> FlexMessage:
-        return FlexMessageHelper.create_simple_message("✅ 成功", message, FlexMessageHelper.COLOR_SUCCESS)
-
-    @staticmethod
-    def create_error_message(message: str) -> FlexMessage:
-        return FlexMessageHelper.create_simple_message("❌ 錯誤", message, FlexMessageHelper.COLOR_DANGER)
-
-    @staticmethod
-    def create_info_message(title: str, message: str) -> FlexMessage:
-        return FlexMessageHelper.create_simple_message(title, message, FlexMessageHelper.COLOR_ACCENT)
-
-    @staticmethod
-    def create_statistics_message(title: str, stats: Dict) -> FlexMessage:
-        """建立統計資訊的 Flex Message"""
-        stat_contents = []
-
-        for key, value in stats.items():
-            # 檢查是否為分隔線（空字串或只有空白）
-            if not key.strip():
-                stat_contents.append({"type": "separator", "margin": "md"})
-                continue
-
-            # 判斷是否為縮排項目 (以空白開頭)
-            is_indented = key.startswith("  ")
-            display_key = key.strip()
-            
-            if is_indented:
-                row = {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": "↳",
-                            "size": "xs",
-                            "color": "#aaaaaa",
-                            "flex": 0,
-                            "margin": "lg"
-                        },
-                        {
-                            "type": "text",
-                            "text": display_key,
-                            "size": "xs",
-                            "color": FlexMessageHelper.COLOR_TEXT_SUB,
-                            "flex": 0,
-                            "margin": "sm"
-                        },
-                        {
-                            "type": "text",
-                            "text": str(value),
-                            "size": "xs",
-                            "color": FlexMessageHelper.COLOR_TEXT_SUB,
-                            "align": "end",
-                            "flex": 1
-                        }
-                    ],
-                    "margin": "xs"
-                }
-            else:
-                # 一般項目
-                color = FlexMessageHelper.COLOR_TEXT_MAIN
-                weight = "regular"
-                
-                # 特殊關鍵字加強顯示
-                if "總" in key or "淨" in key:
-                    weight = "bold"
-                if "淨收入" in key:
-                    color = FlexMessageHelper.COLOR_SUCCESS
-                elif "淨支出" in key:
-                    color = FlexMessageHelper.COLOR_DANGER
-                
-                row = {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "contents": [
-                        {
-                            "type": "text",
-                            "text": display_key,
-                            "size": "sm",
-                            "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                            "flex": 0
-                        },
-                        {
-                            "type": "text",
-                            "text": str(value),
-                            "size": "sm",
-                            "color": color,
-                            "align": "end",
-                            "weight": weight
-                        }
-                    ],
-                    "margin": "sm"
-                }
-            
-            stat_contents.append(row)
-
-        bubble = {
-            "type": "bubble",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "STATISTICS",
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "xxs",
-                        "letterSpacing": "2px"
-                    },
-                    {
-                        "type": "text",
-                        "text": title,
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "lg",
-                        "margin": "sm"
-                    }
-                ],
-                "backgroundColor": FlexMessageHelper.COLOR_PRIMARY,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": stat_contents,
-                "paddingAll": "20px"
-            }
-        }
-
-        return FlexMessage(
-            alt_text=title,
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def create_help_message() -> FlexMessage:
-        """建立說明訊息的 Flex Message"""
-        bubble = {
-            "type": "bubble",
-            "size": "giga",
-            "header": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "text",
-                        "text": "USER GUIDE",
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "xxs",
-                        "align": "center",
-                        "letterSpacing": "2px"
-                    },
-                    {
-                        "type": "text",
-                        "text": "使用說明",
-                        "weight": "bold",
-                        "color": "#ffffff",
-                        "size": "lg",
-                        "align": "center",
-                        "margin": "sm"
-                    }
-                ],
-                "backgroundColor": FlexMessageHelper.COLOR_PRIMARY,
-                "paddingAll": "20px"
-            },
-            "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    # 記帳功能
-                    {
-                        "type": "text",
-                        "text": "💰 記帳功能",
-                        "weight": "bold",
-                        "color": FlexMessageHelper.COLOR_PRIMARY,
-                        "size": "sm",
-                        "margin": "md"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "margin": "sm",
-                        "spacing": "sm",
-                        "contents": [
-                            FlexMessageHelper._create_help_item("開啟記帳表單", "使用 LIFF 表單記帳（推薦）"),
-                            FlexMessageHelper._create_help_item("記帳 500 午餐", "平均分帳：記帳 [金額] [項目]"),
-                            FlexMessageHelper._create_help_item("記帳 500 午餐 小明", "指定付款人：記帳 [金額] [項目] [付款人]"),
-                            FlexMessageHelper._create_help_item("帳目", "顯示所有未結算帳目"),
-                            FlexMessageHelper._create_help_item("我的帳目", "顯示個人收支統計"),
-                            FlexMessageHelper._create_help_item("統計", "顯示總支出統計")
-                        ]
-                    },
-                    {
-                        "type": "separator",
-                        "margin": "lg"
-                    },
-                    # 待辦功能
-                    {
-                        "type": "text",
-                        "text": "📝 待辦功能",
-                        "weight": "bold",
-                        "color": FlexMessageHelper.COLOR_PRIMARY,
-                        "size": "sm",
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "margin": "sm",
-                        "spacing": "sm",
-                        "contents": [
-                             FlexMessageHelper._create_help_item("新增待辦", "開啟表單新增待辦"),
-                             FlexMessageHelper._create_help_item("待辦清單", "查看所有待辦事項"),
-                             FlexMessageHelper._create_help_item("待處理", "查看待處理事項"),
-                             FlexMessageHelper._create_help_item("已完成", "查看已完成事項")
-                        ]
-                    },
-                    {
-                        "type": "separator",
-                        "margin": "lg"
-                    },
-                    # 結算與其他
-                    {
-                        "type": "text",
-                        "text": "⚙️ 結算與其他",
-                        "weight": "bold",
-                        "color": FlexMessageHelper.COLOR_PRIMARY,
-                        "size": "sm",
-                        "margin": "lg"
-                    },
-                    {
-                        "type": "box",
-                        "layout": "vertical",
-                        "margin": "sm",
-                        "spacing": "sm",
-                        "contents": [
-                             FlexMessageHelper._create_help_item("結算", "計算應收應付金額"),
-                             FlexMessageHelper._create_help_item("清帳", "標記所有帳目為已結算"),
-                             FlexMessageHelper._create_help_item("刪除 [編號]", "刪除指定帳目")
-                        ]
-                    },
-                     {
-                        "type": "text",
-                        "text": "💡 支援群組共享與個人紀錄",
-                        "size": "xxs",
-                        "color": "#aaaaaa",
-                        "align": "center",
-                        "margin": "xl"
-                    }
-                ]
-            },
-            "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                    {
-                        "type": "button",
-                        "action": {
-                            "type": "uri",
-                            "label": "開啟記帳表單",
-                            "uri": f"https://liff.line.me/{LIFF.get_liff_id('TALL')}/expense"
-                        },
-                        "style": "primary",
-                        "color": FlexMessageHelper.COLOR_PRIMARY,
-                        "height": "sm"
-                    },
-                    {
-                        "type": "button",
-                        "action": {
-                            "type": "uri",
-                            "label": "新增待辦事項",
-                            "uri": f"https://liff.line.me/{LIFF.get_liff_id('TALL')}/todo/form"
-                        },
-                        "style": "secondary",
-                        "margin": "sm",
-                        "height": "sm"
-                    }
-                ],
-                "paddingAll": "20px",
-                "paddingTop": "0px"
-            }
-        }
-
-        return FlexMessage(
-            alt_text="使用說明",
-            contents=FlexContainer.from_dict(bubble)
-        )
-
-    @staticmethod
-    def _create_help_item(command: str, desc: str) -> Dict:
-        """建立說明項目的 Row"""
-        return {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": command,
-                    "size": "sm",
-                    "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                    "weight": "bold"
-                },
-                {
-                    "type": "text",
-                    "text": desc,
-                    "size": "xs",
-                    "color": FlexMessageHelper.COLOR_TEXT_SUB,
-                    "wrap": True
-                }
-            ],
-            "paddingStart": "md"
-        }
-
-    @staticmethod
-    def _create_row(label: str, value: str) -> Dict:
-        """建立詳細資訊的一行"""
-        return {
-            "type": "box",
-            "layout": "baseline",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": label,
-                    "color": FlexMessageHelper.COLOR_TEXT_SUB,
-                    "size": "sm",
-                    "flex": 1
-                },
-                {
-                    "type": "text",
-                    "text": str(value),
-                    "wrap": True,
-                    "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                    "size": "sm",
-                    "flex": 3
-                }
-            ],
-            "spacing": "sm"
-        }
-
-    @staticmethod
-    def _create_mini_row(label: str, value: str, color: str) -> Dict:
-        """建立小型的 key-value row"""
-        return {
-            "type": "box",
-            "layout": "horizontal",
-            "contents": [
-                {
-                    "type": "text",
-                    "text": label,
-                    "size": "sm",
-                    "color": FlexMessageHelper.COLOR_TEXT_MAIN,
-                    "flex": 0
-                },
-                {
-                    "type": "text",
-                    "text": value,
-                    "size": "sm",
-                    "color": color,
-                    "align": "end",
-                    "weight": "bold"
-                }
-            ],
-            "margin": "sm"
-        }
+        return bubble

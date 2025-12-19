@@ -1,5 +1,10 @@
 /* 待辦清單專屬樣式 */
 
+/* 待辦專屬 info-quote 橘色樣式 */
+.info-quote {
+    border-left-color: var(--warning-color);
+}
+
 /* 表單選擇器樣式優化 */
 .radio-group {
     display: flex;
@@ -36,9 +41,9 @@
 }
 
 .radio-btn input[type="radio"]:checked + label {
-    background: var(--primary-color);
+    background: var(--warning-color);
     color: white;
-    border-color: var(--primary-color);
+    border-color: var(--warning-color);
 }
 
 /* 優先度按鈕專屬配色 */
@@ -72,7 +77,18 @@ input[type="date"] {
 
 input[type="date"]:focus {
     outline: none;
-    border-color: var(--primary-color);
+    border-color: var(--warning-color);
+}
+
+/* 提交按鈕改用待辦橘色系 */
+#todoForm .btn-primary {
+    background: var(--warning-color);
+    border-color: var(--warning-color);
+}
+
+#todoForm .btn-primary:hover {
+    background: #f59e0b;
+    border-color: #f59e0b;
 }
 
 /* 以下為原本的 todo_list.css 內容 */
@@ -96,10 +112,14 @@ input[type="date"]:focus {
     font-family: inherit;
 }
 
+.filter-btn:hover {
+    border-color: var(--warning-color);
+}
+
 .filter-btn.active {
-    background: var(--primary-color);
+    background: var(--warning-color);
     color: white;
-    border-color: var(--primary-color);
+    border-color: var(--warning-color);
 }
 
 .todo-item {

@@ -1,0 +1,140 @@
+/* 群組列表頁面樣式 */
+
+.action-buttons {
+    display: flex;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.action-buttons .btn {
+    flex: 1;
+    font-size: 14px;
+    padding: 10px 16px;
+}
+
+.group-item {
+    background: white;
+    border: 2px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.group-item:hover {
+    border-color: var(--primary-color);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-2px);
+}
+
+.group-item:active {
+    transform: translateY(0);
+}
+
+.group-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-xs);
+}
+
+.group-name {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.group-code {
+    background: var(--bg-light);
+    color: var(--text-secondary);
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 8px;
+    border-radius: var(--radius-sm);
+    font-family: 'Courier New', monospace;
+}
+
+.group-info {
+    display: flex;
+    gap: var(--spacing-md);
+    color: var(--text-secondary);
+    font-size: 14px;
+    margin-top: var(--spacing-xs);
+}
+
+.group-info-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.group-creator-badge {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark) 100%);
+    color: white;
+    font-size: 11px;
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: var(--spacing-xs);
+}
+
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-lg);
+    color: var(--text-secondary);
+}
+
+.empty-state p:first-child {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.empty-state .text-secondary {
+    font-size: 14px;
+}
+
+/* 群組操作按鈕 */
+.group-actions {
+    margin-top: var(--spacing-sm);
+    padding-top: var(--spacing-sm);
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.btn-icon {
+    padding: 8px 16px; /* 增加 padding */
+    font-size: 14px;
+    border-radius: var(--radius-md); /* 增加圓角 */
+    border: 1px solid var(--border-color);
+    background: white;
+    cursor: pointer;
+    transition: all 0.2s;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px; /* Icon 和文字間距 */
+    color: var(--text-secondary);
+}
+
+.btn-icon:hover {
+    background: var(--bg-light);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+}
+
+.btn-share {
+    color: var(--primary-color);
+    border-color: rgba(74, 144, 226, 0.2); /* 淺藍色邊框 */
+    background-color: rgba(74, 144, 226, 0.05); /* 極淺藍色背景 */
+}
+
+.btn-share:hover {
+    background-color: var(--primary-color);
+    color: white;
+}

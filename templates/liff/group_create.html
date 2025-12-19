@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+
+{% block title %}建立群組{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/group_form.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <div class="card">
+    <div class="card-header">
+      <button onclick="window.location.href='/liff/full/groups'" class="btn-icon-back">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <h1><i class="fas fa-plus-circle text-primary"></i> 建立分帳群組</h1>
+    </div>
+    <div class="info-quote">
+      <p class="info-quote-detail">建立新的群組並邀請朋友加入</p>
+    </div>
+
+    <form id="createGroupForm">
+      <div class="form-group">
+        <label for="groupName">群組名稱 *</label>
+        <input
+          type="text"
+          id="groupName"
+          name="groupName"
+          placeholder="例如：環島旅遊、聚餐"
+          required
+          maxlength="50"
+        >
+      </div>
+
+      <div class="form-actions">
+        <button type="submit" class="btn btn-primary btn-block">
+          建立群組
+        </button>
+        <button type="button" id="cancelBtn" class="btn btn-secondary btn-block">
+          取消
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- 成功建立後的分享對話框 -->
+<div id="successModal" class="modal hidden">
+  <div class="modal-content">
+    <div class="modal-icon-wrapper">
+      <i class="fas fa-check-circle text-success" style="font-size: 48px;"></i>
+    </div>
+    <h2>群組建立成功！</h2>
+
+    <div class="group-code-display">
+      <p class="text-secondary">群組代碼</p>
+      <p id="displayGroupCode" class="group-code-large"></p>
+    </div>
+
+    <div class="invite-link-section">
+      <p class="text-secondary mb-1">邀請連結</p>
+      <div class="link-container">
+        <input type="text" id="inviteLink" class="invite-link-input" readonly>
+        <button id="copyLinkBtn" class="btn-copy">
+          <i class="far fa-copy"></i> 複製
+        </button>
+      </div>
+      <p class="text-secondary" style="font-size: 12px; margin-top: 8px;">
+        分享此連結讓朋友直接加入群組
+      </p>
+    </div>
+
+    <div class="modal-actions">
+      <button id="shareLineBtn" class="btn btn-success btn-block">
+        <i class="fab fa-line"></i> 分享到 LINE
+      </button>
+      <button id="closeModalBtn" class="btn btn-secondary btn-block">
+        完成
+      </button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/group_utils.js') }}"></script>
+<script src="{{ url_for('static', filename='js/group_create.js') }}"></script>
+<script>
+  window.onload = function () {
+    initGroupCreatePage('{{ liff_id }}');
+  };
+</script>
+{% endblock %}

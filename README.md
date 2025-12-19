@@ -1,29 +1,33 @@
 # LINE Bot 多人記帳分帳系統
 
-一個基於 Flask 和 Firebase 的 LINE Bot，提供多人共同記帳與自動分帳功能。
+一個基於 Flask 和 Firebase 的 LINE Bot,提供多人共同記帳與自動分帳功能。Bot 以一對一聊天模式運作,使用者可建立群組進行記帳與待辦管理。
 
 ## 功能特色
 
+### 群組管理
+- 👥 **建立群組**：透過 LIFF 建立分帳群組
+- 🔗 **邀請碼加入**：使用 6 位代碼邀請成員加入
+- 📱 **分享功能**：一鍵分享群組邀請連結
+
 ### 記帳功能
-- 🎯 **LIFF 互動表單**：視覺化記帳介面，支援平均分帳、自訂金額
-- ✅ **多人記帳**：支援群組多人共同記帳
-- ✅ **快速記帳**：文字指令快速記帳，平均分配給所有成員
+- 🎯 **LIFF 互動表單**：視覺化記帳介面，支援平均分帳、自訂金額、指定成員
+- ✅ **多人記帳**：群組內多人共同記帳
 - ✅ **智慧結算**：自動計算最優化還款方案（最少轉帳次數）
-- ✅ **帳目查詢**：查看群組帳目、個人收支統計
+- ✅ **帳目查詢**：查看群組帳目、篩選未結算/已結算帳目
 
 ### 待辦清單功能
-- 📝 **LIFF 表單管理**：新增、編輯、刪除待辦事項
-- 👥 **負責人分配**：指定群組成員負責
-- 📁 **類別管理**：支援多種類別分類（工作、學習、生活等）
-- 📅 **到期日提醒**：設定待辦事項截止日期
-- 🎯 **優先度設定**：低、中、高三個優先等級
+- 📝 **LIFF 表單管理**：透過群組詳細頁進入待辦管理
+- ✅ **新增/編輯待辦**：填寫標題、描述、負責人、截止日期
+- 👥 **負責人分配**：從群組成員中指定負責人
+- 📁 **類別管理**：工作、學習、生活、購物、其他
+- 📅 **到期日設定**：設定待辦事項截止日期
+- 🎯 **優先度管理**：低、中、高三個優先等級
 - ✅ **狀態追蹤**：待處理、進行中、已完成、已取消
-- 📊 **統計報表**：按類別、負責人統計待辦事項
 
 ### 共同特色
 - ✅ **Flex Message**：精美的卡片式訊息顯示
-- ✅ **Quick Reply**：快速回覆按鈕，操作更便捷
 - ✅ **Firebase 雲端儲存**：資料安全可靠，支援多裝置同步
+- ✅ **LINE 選單**：透過 Rich Menu 快速存取功能
 
 ## 技術架構
 
@@ -31,53 +35,68 @@
 - **LINE Bot SDK**：line-bot-sdk 3.21.0
 - **LIFF**：LINE Front-end Framework
 - **資料庫**：Firebase Firestore
-- **互動元素**：Quick Reply、Flex Message
+- **互動元素**：Rich Menu、Flex Message
 - **Python 版本**：3.8+
 
 ## 專案結構
 
 ```
-Bill/
-├── app.py                      # Flask 主程式（含 API）
+Coop-Line-Bot/
+├── app.py                      # Flask 主程式
 ├── config.py                   # 設定檔
 ├── requirements.txt            # 套件依賴
 ├── .env                        # 環境變數
+├── blueprints/                 # Flask Blueprints
+│   ├── linebot_app.py          # LINE Webhook 處理
+│   ├── liff_app.py             # LIFF 頁面路由
+│   └── api_app.py              # RESTful API
 ├── templates/                  # 模板
-│   ├── base.html               # 基礎模板
+│   ├── base.html               # 基礎模板（含 LIFF SDK）
 │   └── liff/                   # LIFF 頁面
-│       ├── liff.html           # LIFF 載入頁
+│       ├── groups_list.html    # 群組列表
+│       ├── group_create.html   # 建立群組
+│       ├── group_join.html     # 加入群組（邀請碼）
+│       ├── group_detail.html   # 群組詳細頁（帳目列表）
 │       ├── expense_form.html   # 記帳表單
-│       └── todo_list.html      # 待辦清單
+│       ├── settlement.html     # 結算頁面
+│       ├── todo_form.html      # 待辦事項表單
+│       └── liff.html           # LIFF 動態路由頁面
 ├── static/                     # 靜態資源
 │   ├── css/
-│   │   ├── base.css            # 基礎樣式
+│   │   ├── base.css            # 基礎樣式與共用組件
+│   │   ├── groups_list.css     # 群組列表樣式
+│   │   ├── group_form.css      # 群組表單樣式
+│   │   ├── group_detail.css    # 群組詳細頁樣式
 │   │   ├── expense_form.css    # 記帳表單樣式
-│   │   └── todo_list.css       # 待辦清單樣式
+│   │   ├── settlement.css      # 結算頁面樣式
+│   │   └── todo_form.css       # 待辦表單樣式
 │   └── js/
-│       ├── base.js             # 基礎工具函數
+│       ├── base.js             # 基礎工具函數（LIFF、API、Loading）
+│       ├── groups_list.js      # 群組列表邏輯
+│       ├── group_create.js     # 建立群組邏輯
+│       ├── group_join.js       # 加入群組邏輯
+│       ├── group_utils.js      # 群組共用工具
+│       ├── group_detail.js     # 群組詳細頁邏輯
 │       ├── expense_form.js     # 記帳表單邏輯
-│       └── todo_list.js        # 待辦清單邏輯
+│       ├── settlement.js       # 結算頁面邏輯
+│       └── todo_form.js        # 待辦表單邏輯
 ├── models/                     # 資料模型
-│   ├── user.py
-│   ├── group.py
-│   ├── expense.py
-│   ├── settlement.py
-│   └── todo.py
+│   ├── user.py                 # 使用者模型
+│   ├── group.py                # 群組模型（含邀請碼生成）
+│   ├── expense.py              # 支出模型
+│   ├── settlement.py           # 結算模型
+│   └── todo.py                 # 待辦事項模型
 ├── services/                   # 服務層
-│   ├── firebase_service.py
-│   ├── expense_service.py
-│   ├── settlement_service.py
-│   └── todo_service.py
+│   ├── firebase_service.py     # Firebase Firestore 操作（Singleton）
+│   ├── expense_service.py      # 支出業務邏輯
+│   ├── settlement_service.py   # 結算計算（最少交易算法）
+│   └── todo_service.py         # 待辦事項業務邏輯
 ├── handlers/                   # 處理器
-│   ├── message_handler.py
-│   ├── expense_handler.py
-│   ├── settlement_handler.py
-│   └── todo_handler.py
+│   └── message_handler.py      # LINE 訊息處理（主選單）
 └── utils/                      # 工具
-    ├── parser.py
-    ├── formatter.py
-    ├── quick_reply.py          # Quick Reply
-    └── flex_message.py         # Flex Message
+    ├── liff_enum.py            # LIFF 尺寸枚舉
+    ├── formatter.py            # 格式化工具
+    └── flex_message.py         # Flex Message 訊息卡片
 ```
 
 ## 快速開始
@@ -164,51 +183,77 @@ ngrok http 5000
 
 ## 使用說明
 
-### 記帳相關
+### 開始使用
 
-**🎯 推薦：使用 LIFF 表單**
+1. 加入 LINE Bot 為好友
+2. 透過下方選單點擊「我的群組」開啟群組列表
+3. 選擇「建立新群組」或使用邀請碼「加入群組」
 
-1. 在 LINE 群組中輸入 `開啟記帳表單` 或 `記帳表單`
-2. 會開啟視覺化的記帳介面
+### 群組管理
+
+**建立群組**
+1. 點選「建立新群組」
+2. 輸入群組名稱
+3. 系統自動生成 6 位邀請碼
+4. 分享邀請連結給成員
+
+**加入群組**
+1. 點選「加入群組」
+2. 輸入 6 位邀請碼
+3. 成功加入群組
+
+### 記帳操作
+
+**新增支出（使用 LIFF 表單）**
+1. 進入群組詳細頁面
+2. 點擊「新增支出」
 3. 填寫以下資訊：
    - 項目名稱（例如：午餐、計程車）
-   - 總金額
+   - 總金額（僅整數）
    - 選擇付款人
    - 選擇分帳方式：
-     - **平均分帳**：自動平均分配給所有成員
+     - **平均分帳**：自動平均分配給選中的成員
      - **自訂金額**：可為每個人設定不同金額
+     - **指定成員**：只選擇特定成員分帳
 4. 勾選要分帳的成員
 5. 若選擇自訂金額，可輸入每人應付金額
 6. 系統會自動驗證總金額是否相符
-7. 送出後關閉視窗即完成
+7. 送出後自動發送 Flex Message 到 LINE 聊天室
 
-**📝 快速記帳指令**
+**查詢帳目**
+- 群組詳細頁面提供三個篩選標籤：全部、未結算、已結算
+- 點擊支出項目可查看詳細資訊或刪除
 
-```
-記帳 500 午餐
-```
-自己付款，平均分給所有群組成員
+**結算**
+1. 進入群組詳細頁面
+2. 點擊「結算」按鈕
+3. 系統自動計算最優化還款方案
+4. 確認後將所有帳目標記為已結算
 
-```
-記帳 500 午餐 小明
-```
-小明付款，平均分給所有群組成員
+### 待辦管理
 
-### 查詢相關
+**新增待辦**
+1. 進入群組詳細頁面
+2. 點擊右上角「待辦」按鈕
+3. 在待辦表單中填寫：
+   - 標題（必填）
+   - 描述（選填）
+   - 負責人（從群組成員中選擇）
+   - 類別（工作、學習、生活、購物、其他）
+   - 優先度（低、中、高）
+   - 截止日期（選填）
+4. 點擊「新增待辦」送出
 
-- `帳目` - 顯示所有未結算帳目
-- `我的帳目` - 顯示個人收支統計
-- `統計` - 顯示群組總支出統計
+**編輯/刪除待辦**
+- 在待辦表單頁面可查看所有待辦事項
+- 點擊待辦項目進入編輯模式
+- 可更新狀態：待處理 → 進行中 → 已完成
+- 也可選擇刪除待辦事項
 
-### 結算相關
+### 文字指令
 
-- `結算` - 計算應收應付金額及最佳還款方案
-- `清帳` - 將所有帳目標記為已結算
-
-### 其他
-
-- `刪除 3` - 刪除編號 3 的帳目（僅限建立者）
-- `說明` - 顯示使用說明
+- `說明` 或 `主選單` - 顯示歡迎訊息
+- 其他功能請透過 LINE 選單開啟 LIFF 頁面操作
 
 ## Firebase Firestore 資料結構
 
@@ -225,16 +270,23 @@ ngrok http 5000
 ### groups（群組集合）
 ```javascript
 {
-  line_group_id: string,
   group_name: string,
+  group_code: string,        // 6 位邀請碼
+  created_by: string,         // 建立者 user_id
   created_at: timestamp,
   is_active: boolean,
-  members: {
-    [user_id]: {
-      display_name: string,
-      joined_at: timestamp
-    }
-  }
+  members: [user_id, ...]     // 成員 ID 陣列
+}
+```
+
+### chats（一對一聊天記錄）
+```javascript
+{
+  line_user_id: string,
+  user_name: string,
+  created_at: timestamp,
+  updated_at: timestamp,
+  is_active: boolean
 }
 ```
 
@@ -280,6 +332,24 @@ ngrok http 5000
   settled_at: timestamp,
   settled_by: string,
   settled_by_name: string
+}
+```
+
+### todos（待辦事項集合）
+```javascript
+{
+  group_id: string,
+  title: string,
+  description: string,
+  category: string,          // 工作、學習、生活、購物、其他
+  assignee_id: string,
+  assignee_name: string,
+  status: string,            // pending、in_progress、completed、cancelled
+  priority: string,          // low、medium、high
+  due_date: timestamp,       // 截止日期（選填）
+  created_at: timestamp,
+  updated_at: timestamp,
+  completed_at: timestamp    // 完成時間（選填）
 }
 ```
 
@@ -336,9 +406,14 @@ heroku config:set CHANNEL_ACCESS_TOKEN=你的值
 - 檢查 Channel Secret 和 Channel Access Token
 - 查看應用程式日誌
 
-### 找不到使用者
-- 確認指令中的名稱與 LINE 顯示名稱完全一致
-- 使用者必須先在群組中發言過一次
+### LIFF 頁面無法開啟
+- 確認 LIFF_ID 設定正確
+- 確認 Endpoint URL 已正確設定
+- 檢查是否已啟用 HTTPS
+
+### 群組功能問題
+- 確認使用者已加入 LINE Bot 好友
+- 確認已透過 LIFF 頁面建立或加入群組
 
 ## 授權
 
@@ -349,6 +424,3 @@ MIT License
 如有問題或建議，歡迎開 Issue 討論。
 
 ---
-
-**版本**：1.0.0
-**最後更新**：2025-11-29

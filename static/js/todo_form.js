@@ -9,25 +9,24 @@ async function initTodoForm(liffId) {
   const initialized = await initializeLIFF(liffId);
 
   if (initialized) {
-    if (!liff.isLoggedIn()) {
-      liff.login({ redirectUri: window.location.href });
-    } else {
-      initializeForm();
-    }
+    initializeForm();
   }
 }
 
 /**
  * 初始化表單
  */
-function initializeForm() {
-  // 優先使用後端傳入的 group_id，否則從 URL 參數讀取
-  groupId = window.GROUP_ID;
+/**
+ * 從 URL 路徑提取群組 ID
+ */
+function extractGroupIdFromPath() {
+  const pathMatch = window.location.pathname.match(/\/groups\/([^\/]+)/);
+  return pathMatch ? pathMatch[1] : null;
+}
 
-  if (!groupId) {
-    const urlParams = new URLSearchParams(window.location.search);
-    groupId = urlParams.get('group_id');
-  }
+function initializeForm() {
+  // 優先使用後端傳入的 group_id，否則從 URL path 讀取
+  groupId = window.GROUP_ID || extractGroupIdFromPath();
 
   if (!groupId) {
     showAlert('此功能只能在群組中使用', 'error');
@@ -200,17 +199,37 @@ async function handleFormSubmit(e) {
       });
     } else {
       // 新增
-      data = await apiRequest('/api/todos', {
+      data = await apiRequest(`/api/groups/${groupId}/todos`, {
         method: 'POST',
         body: JSON.stringify(todoData)
       });
     }
 
     if (data.success) {
-      hideLoading();
-      showAlert(todoId ? '更新成功！' : '新增成功！', 'success', 1000);
+      const isEdit = !!todoId;
 
-      if (todoId) {
+      // 嘗試發送 Flex Message（僅在 LIFF 內且有聊天室上下文時）
+      const context = liff.getContext();
+      const canSendMessage = data.flexBubble && liff.isInClient() && context && context.type !== 'none';
+
+      if (canSendMessage) {
+        try {
+          showLoading('發送訊息中...');
+          const flexMessage = {
+            type: 'flex',
+            altText: isEdit ? '待辦已更新' : '新增待辦',
+            contents: data.flexBubble
+          };
+          await liff.sendMessages([flexMessage]);
+        } catch (flexError) {
+          console.error('發送待辦 Flex 失敗:', flexError);
+        }
+      }
+
+      hideLoading();
+      showAlert(isEdit ? '更新成功！' : '新增成功！', 'success', 1000);
+
+      if (isEdit) {
         // 編輯模式：關閉視窗
         setTimeout(() => {
           closeLIFF();

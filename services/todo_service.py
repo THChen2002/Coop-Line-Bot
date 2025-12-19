@@ -17,6 +17,12 @@ class TodoService:
     def create_todo(self, todo_data: Dict) -> Dict:
         """建立待辦事項"""
         try:
+            # 設置時間戳
+            if 'created_at' not in todo_data:
+                todo_data['created_at'] = datetime.now()
+            if 'updated_at' not in todo_data:
+                todo_data['updated_at'] = datetime.now()
+
             todo_id = self.db.create('todos', todo_data)
             return {'success': True, 'todo_id': todo_id}
         except Exception as e:

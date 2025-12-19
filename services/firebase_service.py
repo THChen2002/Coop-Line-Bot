@@ -1,8 +1,9 @@
 import firebase_admin
 from firebase_admin import credentials, firestore
-from datetime import datetime
+from google.cloud.firestore_v1 import Query
+from google.cloud.firestore_v1.base_query import FieldFilter
+from google.cloud.firestore import SERVER_TIMESTAMP, ArrayUnion
 from typing import Optional, Dict, List, Any
-import os
 import logging
 
 logger = logging.getLogger(__name__)
@@ -63,7 +64,7 @@ class FirebaseService:
             # 更新使用者
             update_data = {
                 'display_name': display_name,
-                'updated_at': firestore.SERVER_TIMESTAMP
+                'updated_at': SERVER_TIMESTAMP
             }
             if picture_url:
                 update_data['picture_url'] = picture_url
@@ -74,8 +75,8 @@ class FirebaseService:
                 'line_user_id': line_user_id,
                 'display_name': display_name,
                 'picture_url': picture_url,
-                'created_at': firestore.SERVER_TIMESTAMP,
-                'updated_at': firestore.SERVER_TIMESTAMP
+                'created_at': SERVER_TIMESTAMP,
+                'updated_at': SERVER_TIMESTAMP
             })
 
         return {'line_user_id': line_user_id, 'display_name': display_name}
@@ -91,160 +92,163 @@ class FirebaseService:
 
     # ===== 群組相關操作 =====
 
-    def create_or_update_group(self, line_group_id: str, group_name: str) -> Dict:
-        """建立或更新群組"""
-        group_ref = self._db.collection('groups').document(line_group_id)
-        group_data = group_ref.get()
-
-        if group_data.exists:
-            # 更新群組名稱
-            group_ref.update({
-                'group_name': group_name,
-                'is_active': True
-            })
-        else:
-            # 建立新群組
-            group_ref.set({
-                'line_group_id': line_group_id,
-                'group_name': group_name,
-                'created_at': firestore.SERVER_TIMESTAMP,
-                'is_active': True,
-                'members': {}
-            })
-
-        return {'line_group_id': line_group_id, 'group_name': group_name}
-
-    def create_group(self, line_group_id: str, group_name: str) -> bool:
+    def create_group(self, group_name: str, created_by: str) -> Dict:
         """建立群組
 
         Args:
-            line_group_id: LINE 群組 ID
             group_name: 群組名稱
+            created_by: 建立者 user_id
 
         Returns:
-            是否建立成功
+            群組資料包含 id 和 group_code
         """
-        try:
-            group_data = {
-                'line_group_id': line_group_id,
-                'group_name': group_name,
-                'created_at': firestore.SERVER_TIMESTAMP,
-                'is_active': True,
-                'members': []  # 空列表，成員會在發言時加入
-            }
+        from models.group import Group
 
-            self._db.collection('groups').document(line_group_id).set(group_data)
-            logger.info(f"群組 {line_group_id} 建立成功")
-            return True
+        try:
+            group = Group(group_name=group_name, created_by=created_by)
+            group_data = group.to_dict()
+
+            # created_at 使用 SERVER_TIMESTAMP
+            group_data['created_at'] = SERVER_TIMESTAMP
+
+            # 建立文件
+            doc_ref = self._db.collection('groups').document()
+            doc_ref.set(group_data)
+
+            logger.info(f"群組 {group_name} (code: {group.group_code}) 建立成功")
+
+            return {
+                'id': doc_ref.id,
+                'group_code': group.group_code,
+                'group_name': group_name,
+                'created_by': created_by
+            }
         except Exception as e:
             logger.error(f"建立群組失敗: {e}")
-            return False
+            raise
 
-    def add_group_member(self, line_group_id: str, line_user_id: str, display_name: str, picture_url: str = ''):
-        """新增群組成員（只儲存 user_id 到列表）
+    def get_group_by_code(self, group_code: str) -> Optional[Dict]:
+        """透過群組代碼取得群組
 
         Args:
-            line_group_id: LINE 群組 ID
-            line_user_id: LINE 使用者 ID
-            display_name: 顯示名稱
-            picture_url: 大頭貼 URL（可選）
+            group_code: 群組代碼
+
+        Returns:
+            群組資料或 None
         """
         try:
-            # 將 user_id 加入群組的 members 列表
-            group_ref = self._db.collection('groups').document(line_group_id)
-            group_ref.update({
-                'members': firestore.ArrayUnion([line_user_id])
-            })
+            groups = self._db.collection('groups')\
+                .where(filter=FieldFilter('group_code', '==', group_code))\
+                .limit(1)\
+                .stream()
 
-            # 將用戶詳細資料存到 users 集合
-            self.create_or_update_user(line_user_id, display_name, picture_url)
+            for group in groups:
+                data = group.to_dict()
+                data['id'] = group.id
+                return data
 
-            logger.info(f"成員 {display_name} ({line_user_id}) 已加入群組 {line_group_id}")
+            return None
         except Exception as e:
-            logger.error(f"新增群組成員失敗: {e}")
+            logger.error(f"查詢群組失敗: {e}")
+            return None
 
-    def get_group(self, line_group_id: str) -> Optional[Dict]:
-        """取得群組資料"""
-        group_ref = self._db.collection('groups').document(line_group_id)
-        group_data = group_ref.get()
+    def join_group(self, group_id: str, user_id: str) -> bool:
+        """加入群組
 
-        if group_data.exists:
-            return group_data.to_dict()
-        return None
-
-    def get_group_members(self, line_group_id: str) -> list:
-        """取得群組成員列表（含詳細資料）
+        Args:
+            group_id: 群組 ID
+            user_id: 使用者 ID
 
         Returns:
-            成員列表，格式: [{'id': user_id, 'name': display_name, 'picture_url': url}, ...]
+            是否成功加入
         """
-        group = self.get_group(line_group_id)
-        if not group or 'members' not in group:
+        try:
+            group_ref = self._db.collection('groups').document(group_id)
+            group_ref.update({
+                'members': ArrayUnion([user_id])
+            })
+            logger.info(f"使用者 {user_id} 加入群組 {group_id}")
+            return True
+        except Exception as e:
+            logger.error(f"加入群組失敗: {e}")
+            return False
+
+    def get_user_groups(self, user_id: str) -> List[Dict]:
+        """取得使用者加入的所有群組
+
+        Args:
+            user_id: 使用者 ID
+
+        Returns:
+            群組列表
+        """
+        try:
+            groups = self._db.collection('groups')\
+                .where(filter=FieldFilter('members', 'array_contains', user_id))\
+                .where(filter=FieldFilter('is_active', '==', True))\
+                .order_by('created_at', direction=Query.DESCENDING)\
+                .stream()
+
+            result = []
+            for group in groups:
+                data = group.to_dict()
+                data['id'] = group.id
+                result.append(data)
+
+            return result
+        except Exception as e:
+            logger.error(f"取得使用者群組失敗: {e}")
             return []
 
-        member_ids = group['members']
-        members_with_details = []
-
-        # 從 users 集合取得每個成員的詳細資料
-        for user_id in member_ids:
-            user = self.get_user(user_id)
-            if user:
-                members_with_details.append({
-                    'id': user_id,
-                    'name': user.get('display_name', '未知用戶'),
-                    'picture_url': user.get('picture_url') or 'https://static.line-scdn.net/line_web_login/1980c203b61/dist/image/default@2x.png'
-                })
-
-        return members_with_details
-
-    # ===== 一對一聊天相關操作 =====
-
-    def create_or_update_chat(self, line_user_id: str, user_name: str) -> Dict:
-        """建立或更新一對一聊天記錄
+    def delete_group(self, group_id: str) -> bool:
+        """刪除群組及其所有相關資料
 
         Args:
-            line_user_id: LINE 使用者 ID
-            user_name: 使用者顯示名稱
+            group_id: 群組 ID
 
         Returns:
-            聊天記錄字典
+            是否成功刪除
         """
-        chat_ref = self._db.collection('chats').document(line_user_id)
-        chat_data = chat_ref.get()
+        try:
+            # 使用 batch 操作確保原子性
+            batch = self._db.batch()
 
-        if chat_data.exists:
-            # 更新聊天記錄
-            chat_ref.update({
-                'user_name': user_name,
-                'updated_at': firestore.SERVER_TIMESTAMP
-            })
-        else:
-            # 建立新聊天記錄
-            chat_ref.set({
-                'line_user_id': line_user_id,
-                'user_name': user_name,
-                'created_at': firestore.SERVER_TIMESTAMP,
-                'updated_at': firestore.SERVER_TIMESTAMP,
-                'is_active': True
-            })
+            # 1. 刪除群組的所有 expenses
+            expenses = self._db.collection('expenses')\
+                .where(filter=FieldFilter('group_id', '==', group_id))\
+                .stream()
 
-        return {'line_user_id': line_user_id, 'user_name': user_name}
+            for expense in expenses:
+                batch.delete(expense.reference)
 
-    def get_chat(self, line_user_id: str) -> Optional[Dict]:
-        """取得一對一聊天記錄
+            # 2. 刪除群組的所有 todos
+            todos = self._db.collection('todos')\
+                .where(filter=FieldFilter('group_id', '==', group_id))\
+                .stream()
 
-        Args:
-            line_user_id: LINE 使用者 ID
+            for todo in todos:
+                batch.delete(todo.reference)
 
-        Returns:
-            聊天記錄字典或 None
-        """
-        chat_ref = self._db.collection('chats').document(line_user_id)
-        chat_data = chat_ref.get()
+            # 3. 刪除群組的所有 settlements
+            settlements = self._db.collection('settlements')\
+                .where(filter=FieldFilter('group_id', '==', group_id))\
+                .stream()
 
-        if chat_data.exists:
-            return chat_data.to_dict()
-        return None
+            for settlement in settlements:
+                batch.delete(settlement.reference)
+
+            # 4. 刪除群組本身
+            group_ref = self._db.collection('groups').document(group_id)
+            batch.delete(group_ref)
+
+            # 提交批次操作
+            batch.commit()
+
+            logger.info(f"群組 {group_id} 及其所有相關資料已刪除")
+            return True
+        except Exception as e:
+            logger.error(f"刪除群組失敗: {e}")
+            return False
 
     # ===== 支出記錄相關操作 =====
 
@@ -254,7 +258,7 @@ class FirebaseService:
         expense_number = self._get_next_expense_number(expense_data['group_id'])
 
         expense_data['expense_number'] = expense_number
-        expense_data['created_at'] = firestore.SERVER_TIMESTAMP
+        expense_data['created_at'] = SERVER_TIMESTAMP
         expense_data['is_settled'] = False
 
         doc_ref = self._db.collection('expenses').add(expense_data)
@@ -263,8 +267,8 @@ class FirebaseService:
     def _get_next_expense_number(self, group_id: str) -> int:
         """取得群組內的下一個帳目編號"""
         expenses = self._db.collection('expenses')\
-            .where(filter=firestore.FieldFilter('group_id', '==', group_id))\
-            .order_by('expense_number', direction=firestore.Query.DESCENDING)\
+            .where(filter=FieldFilter('group_id', '==', group_id))\
+            .order_by('expense_number', direction=Query.DESCENDING)\
             .limit(1)\
             .stream()
 
@@ -284,12 +288,31 @@ class FirebaseService:
             return data
         return None
 
-    def get_group_expenses(self, group_id: str, is_settled: bool = False, limit: int = 50) -> List[Dict]:
-        """取得群組的支出記錄"""
+    def get_group_expenses(self, group_id: str, is_settled: bool = None, limit: int = 50) -> List[Dict]:
+        """取得群組的支出記錄
+
+        Args:
+            group_id: 群組 ID
+            is_settled: 是否已結算。None 表示取得所有帳目（不過濾）
+            limit: 限制回傳數量
+
+        Returns:
+            支出記錄列表
+        """
+        # 如果 is_settled 為 None，分別查詢未結算和已結算的帳目，然後合併
+        if is_settled is None:
+            unsettled = self.get_group_expenses(group_id, is_settled=False, limit=limit)
+            settled = self.get_group_expenses(group_id, is_settled=True, limit=limit)
+            # 合併並按 created_at 排序
+            all_expenses = unsettled + settled
+            all_expenses.sort(key=lambda x: x.get('created_at'), reverse=True)
+            return all_expenses[:limit]
+
+        # 原有邏輯：查詢特定 is_settled 狀態的帳目
         expenses = self._db.collection('expenses')\
-            .where(filter=firestore.FieldFilter('group_id', '==', group_id))\
-            .where(filter=firestore.FieldFilter('is_settled', '==', is_settled))\
-            .order_by('created_at', direction=firestore.Query.DESCENDING)\
+            .where(filter=FieldFilter('group_id', '==', group_id))\
+            .where(filter=FieldFilter('is_settled', '==', is_settled))\
+            .order_by('created_at', direction=Query.DESCENDING)\
             .limit(limit)\
             .stream()
 
@@ -304,8 +327,8 @@ class FirebaseService:
     def get_expense_by_number(self, group_id: str, expense_number: int) -> Optional[Dict]:
         """根據帳目編號取得支出記錄"""
         expenses = self._db.collection('expenses')\
-            .where(filter=firestore.FieldFilter('group_id', '==', group_id))\
-            .where(filter=firestore.FieldFilter('expense_number', '==', expense_number))\
+            .where(filter=FieldFilter('group_id', '==', group_id))\
+            .where(filter=FieldFilter('expense_number', '==', expense_number))\
             .limit(1)\
             .stream()
 
@@ -328,8 +351,8 @@ class FirebaseService:
     def settle_expenses(self, group_id: str):
         """將群組的所有未結算支出標記為已結算"""
         expenses = self._db.collection('expenses')\
-            .where(filter=firestore.FieldFilter('group_id', '==', group_id))\
-            .where(filter=firestore.FieldFilter('is_settled', '==', False))\
+            .where(filter=FieldFilter('group_id', '==', group_id))\
+            .where(filter=FieldFilter('is_settled', '==', False))\
             .stream()
 
         batch = self._db.batch()
@@ -342,7 +365,7 @@ class FirebaseService:
 
     def create_settlement(self, settlement_data: Dict) -> str:
         """建立結算記錄"""
-        settlement_data['settled_at'] = firestore.SERVER_TIMESTAMP
+        settlement_data['settled_at'] = SERVER_TIMESTAMP
 
         doc_ref = self._db.collection('settlements').add(settlement_data)
         return doc_ref[1].id
@@ -350,8 +373,8 @@ class FirebaseService:
     def get_group_settlements(self, group_id: str, limit: int = 10) -> List[Dict]:
         """取得群組的結算記錄"""
         settlements = self._db.collection('settlements')\
-            .where(filter=firestore.FieldFilter('group_id', '==', group_id))\
-            .order_by('settled_at', direction=firestore.Query.DESCENDING)\
+            .where(filter=FieldFilter('group_id', '==', group_id))\
+            .order_by('settled_at', direction=Query.DESCENDING)\
             .limit(limit)\
             .stream()
 
@@ -419,11 +442,11 @@ class FirebaseService:
 
         # 加入查詢條件
         for field, operator, value in conditions:
-            query = query.where(filter=firestore.FieldFilter(field, operator, value))
+            query = query.where(filter=FieldFilter(field, operator, value))
 
         # 排序
         if order_by:
-            direction = firestore.Query.DESCENDING if order_direction == 'desc' else firestore.Query.ASCENDING
+            direction = Query.DESCENDING if order_direction == 'desc' else Query.ASCENDING
             query = query.order_by(order_by, direction=direction)
 
         # 限制數量

@@ -1,0 +1,254 @@
+/* 結算頁面樣式 */
+
+/* 卡片間距 */
+.container .card {
+    margin-bottom: var(--spacing-lg);
+}
+
+.container .card:last-child {
+    margin-bottom: 0;
+}
+
+/* 摘要卡片 */
+.summary-card {
+    background: linear-gradient(135deg, var(--primary-color) 0%, #42a5f5 100%);
+    color: white;
+}
+
+.summary-card h2 {
+    margin: 0 0 var(--spacing-md) 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.summary-stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    flex-wrap: wrap;
+}
+
+.summary-stats .stat-item {
+    flex: 1;
+    min-width: 120px;
+    text-align: center;
+    padding: var(--spacing-md);
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: var(--radius-md);
+}
+
+.summary-stats .stat-label {
+    display: block;
+    font-size: 0.875rem;
+    opacity: 0.9;
+    margin-bottom: var(--spacing-xs);
+}
+
+.summary-stats .stat-value {
+    display: block;
+    font-size: 2rem;
+    font-weight: 700;
+}
+
+/* 收支平衡列表 */
+#balancesList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+    background: var(--bg-light);
+    border-left: 4px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.balance-item:hover {
+    background: var(--bg-dark);
+    transform: translateX(2px);
+}
+
+.balance-item.positive {
+    border-left-color: var(--success-color);
+    background: rgba(76, 175, 80, 0.08);
+}
+
+.balance-item.negative {
+    border-left-color: var(--danger-color);
+    background: rgba(244, 67, 54, 0.08);
+}
+
+.balance-item.neutral {
+    border-left-color: var(--secondary-color);
+}
+
+.balance-user {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xs);
+}
+
+.user-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.balance-status {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.balance-amount {
+    font-size: 1.25rem;
+    font-weight: 700;
+}
+
+.balance-item.positive .balance-amount {
+    color: var(--success-color);
+}
+
+.balance-item.negative .balance-amount {
+    color: var(--danger-color);
+}
+
+/* 還款計畫列表 */
+#paymentPlansList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-md);
+}
+
+.payment-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-md);
+    background: var(--bg-light);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+    transition: all 0.2s ease;
+}
+
+.payment-item:hover {
+    background: var(--bg-dark);
+    box-shadow: var(--shadow-sm);
+    transform: translateY(-1px);
+}
+
+.payment-number {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--primary-color);
+    color: white;
+    border-radius: 50%;
+    font-weight: 700;
+    font-size: 0.875rem;
+}
+
+.payment-content {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.payment-from-to {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+}
+
+.payment-from,
+.payment-to {
+    font-weight: 600;
+    font-size: 0.938rem;
+}
+
+.payment-from {
+    color: var(--danger-color);
+}
+
+.payment-to {
+    color: var(--success-color);
+}
+
+.payment-arrow {
+    color: var(--text-secondary);
+    font-size: 1.25rem;
+}
+
+.payment-amount {
+    flex-shrink: 0;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--primary-color);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background: rgba(33, 150, 243, 0.1);
+    border-radius: var(--radius-sm);
+}
+
+/* 操作按鈕區域 */
+.action-section {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+    margin-top: var(--spacing-lg);
+}
+
+.btn-danger {
+    background: var(--danger-color);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+}
+
+/* 空狀態 */
+.empty-state {
+    text-align: center;
+    padding: var(--spacing-xl) var(--spacing-md);
+    color: var(--text-secondary);
+}
+
+.empty-state p {
+    margin: var(--spacing-sm) 0;
+}
+
+/* 響應式設計 */
+@media (max-width: 480px) {
+    .summary-stats {
+        flex-direction: column;
+    }
+
+    .payment-content {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .payment-amount {
+        align-self: flex-end;
+    }
+
+    .balance-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-sm);
+    }
+
+    .balance-amount {
+        align-self: flex-end;
+    }
+}

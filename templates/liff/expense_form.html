@@ -9,18 +9,33 @@
 {% block content %}
 <div class="container">
   <div class="card">
-    <h1>💰 記帳表單</h1>
-    <p class="subtitle">輕鬆記錄每一筆支出</p>
+    <div class="card-header">
+      <button onclick="window.location.href='/liff/full/groups/{{ group_id }}'" class="btn-icon-back">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="group-header-content">
+        <h1 style="margin-bottom: 0;">
+          {% if is_edit_mode %}
+          <i class="fas fa-pen text-primary"></i> 編輯帳目
+          {% else %}
+          <i class="fas fa-wallet text-primary"></i> 記帳表單
+          {% endif %}
+        </h1>
+      </div>
+    </div>
+    <div class="info-quote">
+      <p class="info-quote-detail">{% if is_edit_mode %}修改帳目資訊{% else %}輕鬆記錄每一筆支出{% endif %}</p>
+    </div>
 
     <form id="expenseForm">
       <div class="form-group">
         <label for="description">項目名稱 *</label>
-        <input type="text" id="description" placeholder="例如：午餐、計程車" required>
+        <input type="text" id="description" placeholder="例如：午餐、計程車" value="{{ expense.description if expense else '' }}" required>
       </div>
 
       <div class="form-group">
         <label for="amount">總金額 *</label>
-        <input type="number" id="amount" placeholder="0" min="1" step="1" required>
+        <input type="number" id="amount" placeholder="0" min="1" step="1" value="{{ expense.amount if expense else '' }}" required>
       </div>
 
       <div class="form-group">
@@ -28,7 +43,7 @@
         <select id="payer" required>
           <option value="">請選擇付款人</option>
           {% for member in members %}
-          <option value="{{ member.id }}">{{ member.name }}</option>
+          <option value="{{ member.id }}" {% if expense and expense.payer_id == member.id %}selected{% endif %}>{{ member.name }}</option>
           {% endfor %}
         </select>
       </div>
@@ -36,8 +51,8 @@
       <div class="form-group">
         <label>分帳方式</label>
         <div class="split-type-buttons">
-          <button type="button" class="split-type-btn active" data-type="equal">平均分帳</button>
-          <button type="button" class="split-type-btn" data-type="custom">自訂金額</button>
+          <button type="button" class="split-type-btn {% if not expense or expense.split_type == 'equal' %}active{% endif %}" data-type="equal">平均分帳</button>
+          <button type="button" class="split-type-btn {% if expense and expense.split_type == 'custom' %}active{% endif %}" data-type="custom">自訂金額</button>
         </div>
       </div>
 
@@ -45,13 +60,14 @@
         <label>分帳成員</label>
         <div id="membersList">
           {% for member in members %}
+          {% set member_split = expense.splits|selectattr('user_id', 'equalto', member.id)|first if expense and expense.splits else none %}
           <div class="member-item">
             <input type="checkbox" id="member_{{ member.id }}" value="{{ member.id }}" data-name="{{ member.name }}"
-              checked>
+              {% if not expense or member_split %}checked{% endif %}>
             <img src="{{ member.picture_url }}" alt="{{ member.name }}" class="member-avatar">
             <span class="member-name">{{ member.name }}</span>
             <input type="number" class="member-amount" id="amount_{{ member.id }}" placeholder="0" min="0" step="1"
-              disabled>
+              value="{{ member_split.amount|round if member_split else '' }}" disabled>
           </div>
           {% endfor %}
         </div>
@@ -62,7 +78,7 @@
         <div class="value" id="allocatedAmount">NT$ 0</div>
       </div>
 
-      <button type="submit" class="btn btn-primary btn-block">確認送出</button>
+      <button type="submit" class="btn btn-primary btn-block">{% if is_edit_mode %}確認更新{% else %}確認送出{% endif %}</button>
     </form>
   </div>
 </div>

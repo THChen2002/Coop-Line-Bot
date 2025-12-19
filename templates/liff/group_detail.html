@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}群組詳情{% endblock %}
+
+{% block styles %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/group_detail.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="container">
+  <!-- 群組資訊卡片 -->
+  <div class="card group-info-card">
+    <div class="card-header">
+      <button onclick="window.location.href='/liff/full/groups'" class="btn-icon-back">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="group-header-content" style="flex: 1;">
+        <h2 id="groupName" style="margin-bottom: 0;">載入中...</h2>
+        <div class="group-header-info" style="margin-top: var(--spacing-xs);">
+          <p class="text-secondary" style="margin: 0;">群組代碼: <span id="groupCode" class="code">------</span></p>
+        </div>
+      </div>
+      <button id="deleteGroupBtn" class="btn-icon-danger" title="刪除群組">
+        <i class="fas fa-trash"></i>
+      </button>
+    </div>
+
+    <div class="group-stats">
+      <div class="stat-item">
+        <span class="stat-label">成員</span>
+        <span id="memberCount" class="stat-value">-</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">帳目</span>
+        <span id="expenseCount" class="stat-value">-</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 功能切換 Tab -->
+  <div class="card tab-card">
+    <div class="feature-tabs">
+      <button class="tab-btn active" data-feature="expense">
+        <i class="fas fa-wallet"></i> 記帳
+      </button>
+      <button class="tab-btn" data-feature="todo">
+        <i class="fas fa-tasks"></i> 待辦
+      </button>
+    </div>
+  </div>
+
+  <!-- 記帳功能區塊 -->
+  <div id="expenseSection">
+    <!-- 帳目列表卡片 -->
+    <div class="card">
+      <h3>帳目明細</h3>
+
+      <!-- 操作按鈕 -->
+      <div class="action-section">
+        <button id="addExpenseBtn" class="btn btn-primary btn-block">
+          <i class="fas fa-plus"></i> 新增帳目
+        </button>
+        <button id="settlementBtn" class="btn btn-secondary btn-block">
+          <i class="fas fa-file-invoice-dollar"></i> 查看結算
+        </button>
+      </div>
+
+      <div class="expense-filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="unsettled">未結算</button>
+        <button class="filter-btn" data-filter="settled">已結算</button>
+      </div>
+
+      <div id="expensesList"></div>
+
+      <div id="emptyState" class="empty-state hidden">
+        <p>尚無帳目記錄</p>
+        <p class="text-secondary">點擊「新增帳目」開始記帳</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 待辦功能區塊 -->
+  <div id="todoSection" class="hidden">
+    <!-- 待辦列表卡片 -->
+    <div class="card">
+      <h3>待辦清單</h3>
+
+      <!-- 操作按鈕 -->
+      <div class="action-section">
+        <button id="addTodoBtn" class="btn btn-primary btn-block">
+          <i class="fas fa-plus"></i> 新增待辦
+        </button>
+      </div>
+
+      <div class="todo-filters">
+        <button class="filter-btn active" data-filter="all">全部</button>
+        <button class="filter-btn" data-filter="pending">待處理</button>
+        <button class="filter-btn" data-filter="in_progress">進行中</button>
+        <button class="filter-btn" data-filter="completed">已完成</button>
+      </div>
+
+      <div id="todosList"></div>
+
+      <div id="todoEmptyState" class="empty-state hidden">
+        <p>尚無待辦事項</p>
+        <p class="text-secondary">點擊「新增待辦」開始管理任務</p>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/group_detail.js') }}?v=20251204"></script>
+<script>
+  window.GROUP_ID = '{{ group_id }}';
+  window.onload = function () {
+    initGroupDetailPage('{{ liff_id }}');
+  };
+</script>
+{% endblock %}

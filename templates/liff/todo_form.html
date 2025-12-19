@@ -3,14 +3,25 @@
 {% block title %}待辦事項表單{% endblock %}
 
 {% block styles %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/todo_list.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/todo_form.css') }}">
 {% endblock %}
 
 {% block content %}
 <div class="container">
   <div class="card">
-    <h1>📝 待辦事項</h1>
-    <p class="subtitle" id="formSubtitle">新增待辦事項</p>
+    <div class="card-header">
+      <button onclick="window.location.href='/liff/full/groups/{{ group_id }}'" class="btn-icon-back">
+        <i class="fas fa-arrow-left"></i>
+      </button>
+      <div class="group-header-content">
+        <h1 style="margin-bottom: 0;">
+          <i class="fas fa-tasks text-warning"></i> 待辦事項
+        </h1>
+      </div>
+    </div>
+    <div class="info-quote">
+      <p class="info-quote-detail">新增待辦事項</p>
+    </div>
 
     <form id="todoForm">
       <div class="form-group">

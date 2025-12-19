@@ -1,6 +1,7 @@
 // 記帳表單邏輯
 let splitType = 'equal';
 let groupId = '';
+let expenseId = null; // 編輯模式的 expense ID
 
 /**
  * 初始化記帳表單
@@ -9,12 +10,16 @@ async function initExpenseForm(liffId) {
   const initialized = await initializeLIFF(liffId);
 
   if (initialized) {
-    if (!liff.isLoggedIn()) {
-      liff.login({ redirectUri: window.location.href });
-    } else {
-      initializeForm();
-    }
+    initializeForm();
   }
+}
+
+/**
+ * 從 URL 路徑提取 expense_id
+ */
+function extractExpenseIdFromPath() {
+  const pathMatch = window.location.pathname.match(/\/expenses\/([^\/]+)/);
+  return pathMatch ? pathMatch[1] : null;
 }
 
 /**
@@ -22,15 +27,28 @@ async function initExpenseForm(liffId) {
  */
 function initializeForm() {
   try {
-    showLoading('載入群組成員...');
-
     // 使用後端傳入的 group_id
     groupId = window.GROUP_ID;
 
+    // 從 URL 路徑判斷是否為編輯模式並提取 expense_id
+    const pathMatch = window.location.pathname.match(/\/expenses\/([^\/]+)(?:\/edit)?/);
+    if (pathMatch) {
+      expenseId = pathMatch[1];
+      // 檢查 URL 是否包含 /edit
+      const isEditMode = window.location.pathname.includes('/edit');
+      if (isEditMode) {
+        // 編輯模式：從 DOM 讀取當前 active 的分帳方式按鈕
+        const $activeBtn = $('.split-type-btn.active');
+        if ($activeBtn.length) {
+          splitType = $activeBtn.data('type');
+        }
+      }
+    }
+
     console.log('Group ID:', groupId);
+    console.log('Expense ID:', expenseId);
 
     if (!groupId) {
-      hideLoading();
       showAlert('此功能只能在群組中使用', 'error');
       return;
     }
@@ -38,20 +56,29 @@ function initializeForm() {
     // 檢查是否有成員資料（由模板渲染）
     const $memberItems = $('#membersList .member-item');
     if ($memberItems.length === 0) {
-      hideLoading();
       showAlert('群組中沒有成員資料，請確保群組成員有在 LINE 中發言過', 'warning');
       return;
     }
 
+    // 如果是編輯模式且有預填資料，觸發分帳方式按鈕更新 UI
+    if (expenseId && $('.split-type-btn.active').length) {
+      $('.split-type-btn.active').click();
+    }
+
     // 綁定成員列表的事件
     bindMemberEvents();
-
-    hideLoading();
   } catch (err) {
     console.error('Initialize form error:', err);
-    hideLoading();
     showAlert('初始化表單失敗: ' + err.message, 'error');
   }
+}
+
+/**
+ * 從 URL 路徑提取群組 ID
+ */
+function extractGroupIdFromPath() {
+  const pathMatch = window.location.pathname.match(/\/groups\/([^\/]+)/);
+  return pathMatch ? pathMatch[1] : null;
 }
 
 /**
@@ -169,177 +196,6 @@ function updateAllocation() {
 }
 
 /**
- * 構建記帳成功的 Flex Message
- */
-function createExpenseFlexMessage(expense) {
-  const splitTypeNames = {
-    'equal': '平均分帳',
-    'selected': '指定成員',
-    'custom': '自訂金額',
-    'ratio': '比例分帳'
-  };
-
-  // 建立分帳明細
-  const splitContents = expense.splits.map(split => ({
-    type: "box",
-    layout: "horizontal",
-    contents: [
-      {
-        type: "text",
-        text: split.user_name,
-        size: "sm",
-        color: "#555555",
-        flex: 0
-      },
-      {
-        type: "text",
-        text: `NT$ ${Math.round(split.amount).toLocaleString()}`,
-        size: "sm",
-        color: "#555555",
-        align: "end"
-      }
-    ],
-    margin: "sm"
-  }));
-
-  // 格式化日期
-  const date = new Date();
-  const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-
-  return {
-    type: "flex",
-    altText: `記帳成功：${expense.description} NT$ ${Math.round(expense.amount).toLocaleString()}`,
-    contents: {
-      type: "bubble",
-      size: "giga",
-      header: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: "RECEIPT",
-            weight: "bold",
-            color: "#ffffff",
-            size: "xxs",
-            align: "center",
-            letterSpacing: "2px"
-          },
-          {
-            type: "text",
-            text: "記帳成功",
-            weight: "bold",
-            color: "#ffffff",
-            size: "lg",
-            align: "center",
-            margin: "sm"
-          }
-        ],
-        backgroundColor: "#06C755",
-        paddingAll: "20px"
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: "NT$",
-            size: "sm",
-            color: "#aaaaaa",
-            align: "center"
-          },
-          {
-            type: "text",
-            text: Math.round(expense.amount).toLocaleString(),
-            size: "4xl",
-            weight: "bold",
-            color: "#1DB446",
-            align: "center"
-          },
-          {
-            type: "separator",
-            margin: "xl"
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            margin: "xl",
-            spacing: "md",
-            contents: [
-              {
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: "項目", size: "sm", color: "#aaaaaa", flex: 0 },
-                  { type: "text", text: expense.description, size: "sm", color: "#555555", align: "end" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: "付款人", size: "sm", color: "#aaaaaa", flex: 0 },
-                  { type: "text", text: expense.payer_name, size: "sm", color: "#555555", align: "end" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: "分帳方式", size: "sm", color: "#aaaaaa", flex: 0 },
-                  { type: "text", text: splitTypeNames[expense.split_type] || '平均分帳', size: "sm", color: "#555555", align: "end" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: "日期", size: "sm", color: "#aaaaaa", flex: 0 },
-                  { type: "text", text: dateStr, size: "sm", color: "#555555", align: "end" }
-                ]
-              }
-            ]
-          },
-          {
-            type: "separator",
-            margin: "xl"
-          },
-          {
-            type: "text",
-            text: "分帳明細",
-            size: "xs",
-            color: "#aaaaaa",
-            margin: "xl",
-            weight: "bold"
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            margin: "md",
-            contents: splitContents
-          }
-        ]
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        contents: [
-          {
-            type: "text",
-            text: `Expense ID: #${String(expense.expense_number || 0).padStart(3, '0')}`,
-            size: "xxs",
-            color: "#bbbbbb",
-            align: "center"
-          }
-        ],
-        paddingAll: "15px"
-      }
-    }
-  };
-}
-
-/**
  * 處理表單提交
  */
 async function handleExpenseSubmit(e) {
@@ -393,48 +249,79 @@ async function handleExpenseSubmit(e) {
 
   // 送出資料
   try {
-    showLoading('處理中...');
+    showLoading(expenseId ? '更新中...' : '處理中...');
 
     const payerName = $(`#payer option[value="${payerId}"]`).text();
 
-    const result = await apiRequest('/api/expenses', {
-      method: 'POST',
-      body: JSON.stringify({
-        group_id: groupId,
-        payer_id: payerId,
-        payer_name: payerName,
-        amount: amount,
-        description: description,
-        split_type: splitType,
-        splits: splits,
-        created_by: payerId
-      })
-    });
+    const expenseData = {
+      payer_id: payerId,
+      payer_name: payerName,
+      amount: amount,
+      description: description,
+      split_type: splitType,
+      splits: splits
+    };
+
+    let result;
+    if (expenseId) {
+      // 編輯模式：使用 PUT
+      result = await apiRequest(`/api/expenses/${expenseId}`, {
+        method: 'PUT',
+        body: JSON.stringify(expenseData)
+      });
+    } else {
+      // 新增模式：使用 POST
+      expenseData.group_id = groupId;
+      expenseData.created_by = payerId;
+      result = await apiRequest(`/api/groups/${groupId}/expenses`, {
+        method: 'POST',
+        body: JSON.stringify(expenseData)
+      });
+    }
 
     if (result.success) {
-      // 構建 Flex Message
-      const expense = result.expense;
-      const flexMessage = createExpenseFlexMessage(expense);
+      // 檢查是否可以發送訊息到聊天室
+      // 條件：在 LINE 內建瀏覽器中，且有聊天室上下文（從群組/聊天室開啟）
+      const context = liff.getContext();
+      const canSendMessage = liff.isInClient() && context && context.type !== 'none';
 
-      // 使用 liff.sendMessages 發送訊息
-      liff.sendMessages([flexMessage])
-        .then(() => {
-          showAlert('記帳成功！', 'success', 800);
-          setTimeout(() => {
-            closeLIFF();
-          }, 800);
-        })
-        .catch((err) => {
+      if (canSendMessage && result.flexBubble) {
+        // 更新 loading 文字
+        showLoading('發送訊息中...');
+
+        try {
+          const expense = result.expense;
+
+          // 包裝成完整的 Flex Message
+          const flexMessage = {
+            type: 'flex',
+            altText: `記帳成功：${expense.description} NT$ ${expense.amount.toLocaleString()}`,
+            contents: result.flexBubble
+          };
+
+          // 使用 liff.sendMessages 發送訊息
+          await liff.sendMessages([flexMessage]);
+          hideLoading();
+          showAlert(expenseId ? '更新成功！' : '記帳成功！', 'success', 1000);
+        } catch (err) {
           console.error('發送訊息失敗:', err);
-          // 即使發送失敗，也顯示成功並關閉
-          showAlert('記帳成功！', 'success', 800);
-          setTimeout(() => {
-            closeLIFF();
-          }, 800);
-        });
+          // 即使發送失敗，也顯示成功
+          hideLoading();
+          showAlert(expenseId ? '更新成功！' : '記帳成功！', 'success', 1000);
+        }
+      } else {
+        // 外部瀏覽器或沒有 flexBubble：直接顯示成功
+        hideLoading();
+        showAlert(expenseId ? '更新成功！' : '記帳成功！', 'success', 1000);
+      }
+
+      // 統一在這裡跳轉
+      setTimeout(() => {
+        window.location.href = `/liff/full/groups/${groupId}`;
+      }, 1000);
     } else {
       hideLoading();
-      showAlert(result.error || '記帳失敗', 'error');
+      showAlert(result.error || (expenseId ? '更新失敗' : '記帳失敗'), 'error');
     }
   } catch (err) {
     hideLoading();
